@@ -132,7 +132,6 @@ step_install_python() {
         pydantic \
         pyyaml \
         python-dotenv \
-        orjson \
         httpx[http2] \
         websockets \
         schedule \
