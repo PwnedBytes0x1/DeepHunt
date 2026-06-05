@@ -93,48 +93,45 @@ check_storage() {
 
 step_update_pkg() {
     print_status "Step 1/7: Updating package database..."
-    pkg update -y
+    pkg update -y >/dev/null 2>&1 || print_warning "Package update had issues"
     print_success "Package database updated"
 }
 
 step_install_core() {
     print_status "Step 2/7: Installing core dependencies..."
     
-    # Update package database first (non-blocking)
-    pkg update -y 2>/dev/null || true
-    
-    # Install core packages with fallback
+    # Install core packages silently, track failures
     local packages="git curl wget jq python python-pip termux-api"
+    local failed=""
     
     for pkg_name in $packages; do
-        pkg install -y "$pkg_name" 2>/dev/null || print_warning "$pkg_name install failed, continuing..."
+        pkg install -y "$pkg_name" >/dev/null 2>&1 || failed="$failed $pkg_name"
     done
     
-    # Install additional packages (non-blocking)
-    pkg install -y clang make cmake pkg-config 2>/dev/null || true
-    pkg install -y libffi libxml2 libxslt 2>/dev/null || true
-    pkg install -y libpng libjpeg-turbo freetype zlib 2>/dev/null || true
+    # Install additional packages silently
+    pkg install -y clang make cmake pkg-config >/dev/null 2>&1 || true
+    pkg install -y libffi libxml2 libxslt >/dev/null 2>&1 || true
+    pkg install -y libpng libjpeg-turbo freetype zlib >/dev/null 2>&1 || true
     
+    [ -n "$failed" ] && print_warning "Failed packages:$failed"
     print_success "Core dependencies installed"
 }
 
 step_install_python() {
     print_status "Step 3/7: Installing Python libraries..."
 
-    # Use python -m pip to ensure we're using the correct pip
-    python -m pip install --upgrade pip setuptools wheel 2>/dev/null || true
+    # Upgrade pip silently
+    python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
 
-    # Install core dependencies with error handling
-    python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit 2>/dev/null || true
+    # Install core dependencies silently
+    python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit >/dev/null 2>&1 || print_warning "Some core packages failed"
     
-    # Install httpx with http2 support (may fail on some platforms)
-    python -m pip install "httpx[http2]" 2>/dev/null || python -m pip install httpx 2>/dev/null || true
+    # Install httpx silently
+    python -m pip install "httpx[http2]" >/dev/null 2>&1 || python -m pip install httpx >/dev/null 2>&1 || true
     
-    # Install optional telegram support (non-blocking)
-    python -m pip install python-telegram-bot 2>/dev/null || true
-    
-    # Install psutil for system monitoring
-    python -m pip install psutil 2>/dev/null || true
+    # Install optional packages silently
+    python -m pip install python-telegram-bot >/dev/null 2>&1 || true
+    python -m pip install psutil >/dev/null 2>&1 || true
 
     print_success "Python libraries installed"
 }
@@ -142,18 +139,18 @@ step_install_python() {
 step_install_go_tools() {
     print_status "Step 4/7: Installing Go-based tools..."
 
-    if command -v go &> /dev/null; then
+    if command -v go >/dev/null 2>&1; then
         export GOPATH="$HOME/go"
         export PATH="$PATH:$GOPATH/bin"
 
-        # Install Go tools with error handling
-        go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest 2>/dev/null || true
-        go install github.com/projectdiscovery/katana/cmd/katana@latest 2>/dev/null || true
-        go install github.com/projectdiscovery/httpx/cmd/httpx@latest 2>/dev/null || true
-        go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest 2>/dev/null || true
-        go install github.com/projectdiscovery/notify/cmd/notify@latest 2>/dev/null || true
-        go install github.com/lc/gau/v2/cmd/gau@latest 2>/dev/null || true
-        go install github.com/ffuf/ffuf@latest 2>/dev/null || true
+        # Install Go tools silently
+        go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >/dev/null 2>&1 || true
+        go install github.com/projectdiscovery/katana/cmd/katana@latest >/dev/null 2>&1 || true
+        go install github.com/projectdiscovery/httpx/cmd/httpx@latest >/dev/null 2>&1 || true
+        go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest >/dev/null 2>&1 || true
+        go install github.com/projectdiscovery/notify/cmd/notify@latest >/dev/null 2>&1 || true
+        go install github.com/lc/gau/v2/cmd/gau@latest >/dev/null 2>&1 || true
+        go install github.com/ffuf/ffuf@latest >/dev/null 2>&1 || true
 
         print_success "Go tools installed"
     else
@@ -165,8 +162,8 @@ step_install_go_tools() {
 step_install_python_tools() {
     print_status "Step 5/7: Installing Python-based tools..."
 
-    # Install Python-based tools with error handling
-    python -m pip install dirsearch arjun wafw00f 2>/dev/null || true
+    # Install Python-based tools silently
+    python -m pip install dirsearch arjun wafw00f >/dev/null 2>&1 || print_warning "Some Python tools failed"
 
     print_success "Python tools installed"
 }
@@ -210,27 +207,25 @@ step_permissions() {
 step_setup_workspace() {
     print_status "Step 7/7: Setting up DeepHunt workspace..."
 
-    # Clone or update repository
+    # Clone or update repository silently
     if [ -d "$WORKSPACE_DIR/.git" ]; then
-        print_status "Updating existing repository..."
         cd "$WORKSPACE_DIR"
-        git pull origin main 2>/dev/null || print_warning "Git pull failed"
+        git pull origin main >/dev/null 2>&1 || print_warning "Git pull failed"
     else
-        print_status "Cloning DeepHunt repository..."
-        git clone "$REPO_URL" "$WORKSPACE_DIR" 2>/dev/null || {
+        git clone "$REPO_URL" "$WORKSPACE_DIR" >/dev/null 2>&1 || {
             print_warning "Git clone failed, creating workspace manually..."
             mkdir -p "$WORKSPACE_DIR"
         }
     fi
 
-    # Install DeepHunt in development mode
+    # Install DeepHunt in development mode silently
     if [ -d "$WORKSPACE_DIR" ]; then
         cd "$WORKSPACE_DIR"
-        python -m pip install -e . 2>/dev/null || print_warning "Development install failed"
+        python -m pip install -e . >/dev/null 2>&1 || print_warning "Development install failed"
     fi
 
-    # Initialize workspace
-    python -m deephunt.cli init 2>/dev/null || print_warning "Workspace initialization skipped"
+    # Initialize workspace silently
+    python -m deephunt.cli init >/dev/null 2>&1 || print_warning "Workspace initialization skipped"
 
     print_success "Workspace setup complete"
 }
