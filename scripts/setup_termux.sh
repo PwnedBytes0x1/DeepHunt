@@ -93,7 +93,10 @@ check_storage() {
 
 step_update_pkg() {
     print_status "Step 1/7: Updating package database..."
-    pkg update -y >/dev/null 2>&1 || print_warning "Package update had issues"
+    if ! pkg update -y >/dev/null 2>&1; then
+        print_warning "Package update failed - network may be unavailable"
+        print_warning "Continuing with existing package versions..."
+    fi
     print_success "Package database updated"
 }
 
@@ -105,7 +108,9 @@ step_install_core() {
     local failed=""
     
     for pkg_name in $packages; do
-        pkg install -y "$pkg_name" >/dev/null 2>&1 || failed="$failed $pkg_name"
+        if ! pkg install -y "$pkg_name" >/dev/null 2>&1; then
+            failed="$failed $pkg_name"
+        fi
     done
     
     # Install additional packages silently
@@ -113,7 +118,10 @@ step_install_core() {
     pkg install -y libffi libxml2 libxslt >/dev/null 2>&1 || true
     pkg install -y libpng libjpeg-turbo freetype zlib >/dev/null 2>&1 || true
     
-    [ -n "$failed" ] && print_warning "Failed packages:$failed"
+    if [ -n "$failed" ]; then
+        print_warning "Some packages failed to install:$failed"
+        print_warning "You may need to install them manually: pkg install <package>"
+    fi
     print_success "Core dependencies installed"
 }
 
@@ -121,17 +129,22 @@ step_install_python() {
     print_status "Step 3/7: Installing Python libraries..."
 
     # Upgrade pip silently
-    python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
+    if ! python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1; then
+        print_warning "Failed to upgrade pip - may affect some installations"
+    fi
 
     # Install core dependencies silently
-    python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit >/dev/null 2>&1 || print_warning "Some core packages failed"
+    if ! python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit >/dev/null 2>&1; then
+        print_warning "Some core Python packages failed to install"
+        print_warning "Core functionality may be limited - run: pip install <package>"
+    fi
     
     # Install httpx silently
     python -m pip install "httpx[http2]" >/dev/null 2>&1 || python -m pip install httpx >/dev/null 2>&1 || true
     
     # Install optional packages silently
-    python -m pip install python-telegram-bot >/dev/null 2>&1 || true
-    python -m pip install psutil >/dev/null 2>&1 || true
+    python -m pip install python-telegram-bot >/dev/null 2>&1 || print_warning "Telegram notifications disabled (python-telegram-bot failed)"
+    python -m pip install psutil >/dev/null 2>&1 || print_warning "System monitoring limited (psutil failed)"
 
     print_success "Python libraries installed"
 }
@@ -139,69 +152,77 @@ step_install_python() {
 step_install_go_tools() {
     print_status "Step 4/7: Installing Go-based tools..."
 
-    if command -v go >/dev/null 2>&1; then
-        export GOPATH="$HOME/go"
-        export PATH="$PATH:$GOPATH/bin"
-
-        # Install Go tools silently
-        go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >/dev/null 2>&1 || true
-        go install github.com/projectdiscovery/katana/cmd/katana@latest >/dev/null 2>&1 || true
-        go install github.com/projectdiscovery/httpx/cmd/httpx@latest >/dev/null 2>&1 || true
-        go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest >/dev/null 2>&1 || true
-        go install github.com/projectdiscovery/notify/cmd/notify@latest >/dev/null 2>&1 || true
-        go install github.com/lc/gau/v2/cmd/gau@latest >/dev/null 2>&1 || true
-        go install github.com/ffuf/ffuf@latest >/dev/null 2>&1 || true
-
-        print_success "Go tools installed"
-    else
-        print_warning "Go not found. Skipping native tools."
-        print_warning "Install Go for better performance: pkg install golang"
+    if ! command -v go >/dev/null 2>&1; then
+        print_warning "Go not installed - native security tools will be skipped"
+        print_warning "For full functionality: pkg install golang"
+        print_warning "Then re-run this script to install: go install ..."
+        return 0
     fi
+    
+    print_status "Go detected, installing security tools..."
+    export GOPATH="$HOME/go"
+    export PATH="$PATH:$GOPATH/bin"
+
+    # Install Go tools silently
+    go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >/dev/null 2>&1 || true
+    go install github.com/projectdiscovery/katana/cmd/katana@latest >/dev/null 2>&1 || true
+    go install github.com/projectdiscovery/httpx/cmd/httpx@latest >/dev/null 2>&1 || true
+    go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest >/dev/null 2>&1 || true
+    go install github.com/projectdiscovery/notify/cmd/notify@latest >/dev/null 2>&1 || true
+    go install github.com/lc/gau/v2/cmd/gau@latest >/dev/null 2>&1 || true
+    go install github.com/ffuf/ffuf@latest >/dev/null 2>&1 || true
+
+    print_success "Go tools installed"
 }
 
 step_install_python_tools() {
     print_status "Step 5/7: Installing Python-based tools..."
 
     # Install Python-based tools silently
-    python -m pip install dirsearch arjun wafw00f >/dev/null 2>&1 || print_warning "Some Python tools failed"
+    if ! python -m pip install dirsearch arjun wafw00f >/dev/null 2>&1; then
+        print_warning "Some Python security tools failed to install"
+        print_warning "You can install manually: pip install dirsearch arjun wafw00f"
+    fi
 
     print_success "Python tools installed"
 }
 
 step_permissions() {
-    print_status "Step 6/7: Requesting Android permissions..."
+    print_status "Step 6/7: Configuring Android permissions..."
 
     # Skip permission requests in non-interactive mode or if not in Termux
     if [ -z "$TERMUX_VERSION" ]; then
-        print_warning "Not in Termux. Skipping Android permissions."
-        print_success "Permissions setup skipped (not in Termux)"
+        print_warning "Not running in Termux - skipping Android permissions"
+        print_warning "On desktop Linux/macOS, no special permissions needed"
+        print_success "Permissions step skipped (non-Termux environment)"
         return 0
     fi
 
     # Check if termux-notification is available
-    if ! command -v termux-notification &> /dev/null; then
-        print_warning "Termux:API not installed. Skipping notifications."
-        print_warning "Install with: pkg install termux-api"
-        print_success "Permissions setup skipped (no Termux:API)"
+    if ! command -v termux-notification >/dev/null 2>&1; then
+        print_warning "Termux:API app not installed"
+        print_warning "DeepHunt will run without notification support"
+        print_warning "To enable: pkg install termux-api, then grant notification permission"
+        print_success "Permissions setup skipped (Termux:API not available)"
         return 0
     fi
 
     # Test notification permission (with timeout to prevent hanging)
     print_status "Testing notification permission..."
-    timeout 5 termux-notification --title "DeepHunt Test" --content "API OK" 2>/dev/null
-    if [ $? -eq 0 ]; then
-        print_success "Notification permission OK"
+    if timeout 5 termux-notification --title "DeepHunt" --content "API test" >/dev/null 2>&1; then
+        print_success "Notifications enabled - you'll receive hunt approvals via notifications"
     else
-        print_warning "Notification permission may be needed for approval requests"
-        print_warning "Grant in Settings > Apps > Termux > Permissions"
+        print_warning "Notifications require permission setup"
+        print_warning "To enable: Open Termux app > Settings > Permissions > Allow notifications"
+        print_warning "DeepHunt will still work but you'll need to check manually for approvals"
     fi
 
-    # Battery optimization info (just informational, don't block)
-    print_status "Battery optimization settings can be configured manually:"
+    # Battery optimization info
+    print_status "Battery optimization (optional but recommended):"
     print_status "  Settings > Apps > Termux > Battery > Unrestricted"
-    print_status "  Or search for 'battery optimization' in settings"
+    print_status "  This prevents Termux from being killed during long hunts"
 
-    print_success "Permissions setup complete (informational mode)"
+    print_success "Permissions configuration complete"
 }
 
 step_setup_workspace() {
@@ -209,23 +230,37 @@ step_setup_workspace() {
 
     # Clone or update repository silently
     if [ -d "$WORKSPACE_DIR/.git" ]; then
+        print_status "Updating existing DeepHunt installation..."
         cd "$WORKSPACE_DIR"
-        git pull origin main >/dev/null 2>&1 || print_warning "Git pull failed"
+        if ! git pull origin main >/dev/null 2>&1; then
+            print_warning "Failed to update - check your internet connection"
+            print_warning "Continuing with existing installation..."
+        fi
     else
-        git clone "$REPO_URL" "$WORKSPACE_DIR" >/dev/null 2>&1 || {
-            print_warning "Git clone failed, creating workspace manually..."
+        print_status "Downloading DeepHunt repository..."
+        if ! git clone "$REPO_URL" "$WORKSPACE_DIR" >/dev/null 2>&1; then
+            print_warning "Failed to clone repository - check your internet connection"
+            print_warning "Creating empty workspace directory..."
             mkdir -p "$WORKSPACE_DIR"
-        }
+        fi
     fi
 
     # Install DeepHunt in development mode silently
     if [ -d "$WORKSPACE_DIR" ]; then
+        print_status "Installing DeepHunt package..."
         cd "$WORKSPACE_DIR"
-        python -m pip install -e . >/dev/null 2>&1 || print_warning "Development install failed"
+        if ! python -m pip install -e . >/dev/null 2>&1; then
+            print_warning "Package installation failed"
+            print_warning "You can run directly: python -m deephunt.cli"
+        fi
     fi
 
     # Initialize workspace silently
-    python -m deephunt.cli init >/dev/null 2>&1 || print_warning "Workspace initialization skipped"
+    print_status "Initializing DeepHunt configuration..."
+    if ! python -m deephunt.cli init >/dev/null 2>&1; then
+        print_warning "Configuration initialization failed"
+        print_warning "You can run 'dhunt init' later to configure"
+    fi
 
     print_success "Workspace setup complete"
 }
