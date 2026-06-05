@@ -1,0 +1,3 @@
+[console_scripts]
+deeephunt = deephunt.cli:main
+dhunt = deephunt.cli:main
