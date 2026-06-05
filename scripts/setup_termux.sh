@@ -13,6 +13,9 @@ HOME_DIR="$HOME"
 WORKSPACE_DIR="${HOME_DIR}/deephunt"
 REPO_URL="https://github.com/PwnedBytes0x1/deephunt.git"
 
+# Ensure pip scripts are in PATH
+export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+
 # Colors (with fallback for terminals that don't support colors)
 if [ -t 1 ]; then
     RED='\033[0;31m'
@@ -276,27 +279,41 @@ step_setup_workspace() {
         print_warning "You can run 'dhunt init' later to configure"
     fi
 
-    # Show where dhunt command is installed
-    print_status "Checking dhunt command location..."
+    # Create symlinks for dhunt command in PATH
+    print_status "Setting up dhunt command..."
     
-    # Ensure PATH includes local bin for current session
-    export PATH="$HOME/.local/bin:$PATH"
+    # Try multiple locations for the dhunt script
+    local script_sources="$HOME/.local/bin/dhunt $HOME/.local/bin/deephunt"
+    local linked=false
     
-    if command -v dhunt >/dev/null 2>&1; then
-        print_success "dhunt command is available!"
-    elif [ -f "$HOME/.local/bin/dhunt" ]; then
-        print_warning "dhunt installed in ~/.local/bin"
-        # Add to bashrc for persistence
+    for script in $script_sources; do
+        if [ -f "$script" ]; then
+            local cmd_name=$(basename "$script")
+            # Create symlink in PREFIX/bin if not already there
+            if [ ! -f "$PREFIX/bin/$cmd_name" ]; then
+                ln -sf "$script" "$PREFIX/bin/$cmd_name" 2>/dev/null && {
+                    print_success "Linked $cmd_name to $PREFIX/bin"
+                    linked=true
+                }
+            fi
+        fi
+    done
+    
+    # If symlink creation failed, ensure PATH includes local bin
+    if [ "$linked" = false ]; then
+        export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+        
+        # Add to bashrc for persistence if not already there
         if ! grep -q "\.local/bin" ~/.bashrc 2>/dev/null; then
             echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-            print_success "Added ~/.local/bin to PATH in ~/.bashrc"
         fi
-        print_warning "Run 'source ~/.bashrc' or restart Termux to use dhunt"
-    elif [ -f "$PREFIX/bin/dhunt" ]; then
-        print_success "dhunt installed in $PREFIX/bin"
-    else
-        print_warning "dhunt command not found in PATH"
-        print_warning "Run: python -m deephunt.cli --help"
+        
+        if command -v dhunt >/dev/null 2>&1; then
+            print_success "dhunt command available in PATH"
+        else
+            print_warning "dhunt command not found in PATH"
+            print_warning "Added ~/.local/bin to PATH. Run: source ~/.bashrc"
+        fi
     fi
 
     print_success "Workspace setup complete"
