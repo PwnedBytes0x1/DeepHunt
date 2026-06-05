@@ -174,20 +174,37 @@ step_install_python_tools() {
 step_permissions() {
     print_status "Step 6/7: Requesting Android permissions..."
 
-    # Request notification permission (non-blocking)
-    if command -v termux-notification &> /dev/null; then
-        if ! termux-notification --title "DeepHunt Test" --content "API OK" 2>/dev/null; then
-            print_warning "Please grant notification permission to Termux:API"
-            termux-open --chooser "android.settings.NOTIFICATION_SETTINGS" 2>/dev/null || true
-        fi
-    else
-        print_warning "Termux:API not found. Notifications disabled."
+    # Skip permission requests in non-interactive mode or if not in Termux
+    if [ -z "$TERMUX_VERSION" ]; then
+        print_warning "Not in Termux. Skipping Android permissions."
+        print_success "Permissions setup skipped (not in Termux)"
+        return 0
     fi
 
-    # Disable battery optimization (non-blocking)
-    termux-open --chooser "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" 2>/dev/null || true
+    # Check if termux-notification is available
+    if ! command -v termux-notification &> /dev/null; then
+        print_warning "Termux:API not installed. Skipping notifications."
+        print_warning "Install with: pkg install termux-api"
+        print_success "Permissions setup skipped (no Termux:API)"
+        return 0
+    fi
 
-    print_success "Permission requests completed"
+    # Test notification permission (with timeout to prevent hanging)
+    print_status "Testing notification permission..."
+    timeout 5 termux-notification --title "DeepHunt Test" --content "API OK" 2>/dev/null
+    if [ $? -eq 0 ]; then
+        print_success "Notification permission OK"
+    else
+        print_warning "Notification permission may be needed for approval requests"
+        print_warning "Grant in Settings > Apps > Termux > Permissions"
+    fi
+
+    # Battery optimization info (just informational, don't block)
+    print_status "Battery optimization settings can be configured manually:"
+    print_status "  Settings > Apps > Termux > Battery > Unrestricted"
+    print_status "  Or search for 'battery optimization' in settings"
+
+    print_success "Permissions setup complete (informational mode)"
 }
 
 step_setup_workspace() {
