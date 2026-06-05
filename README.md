@@ -31,6 +31,7 @@
 | **Approval Gates** | All active exploitation requires explicit approval |
 | **Immutable Audit Trail** | Hash-chained, tamper-evident logging |
 | **Custom Skill System** | Markdown-based skills in `skills/` directory with nested support |
+| **Attack Chaining** | Specialized methodology for combining vulnerabilities for maximum impact |
 | **Binary Compilation** | Build standalone executables with PyInstaller |
 | **Multi-Agent Architecture** | Lazy-loaded agents to minimize RAM usage |
 | **Scope Enforcement** | Programmatic regex + domain filter for every request |
@@ -130,6 +131,9 @@ skills/
 │   └── http_request_smuggling.md
 ├── post_exploitation/
 │   └── lateral_movement.md
+├── 21-chaining/
+│   ├── chaining-methodology.md
+│   └── common-attack-chains.md
 └── registry.json
 ```
 

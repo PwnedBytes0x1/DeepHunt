@@ -542,7 +542,7 @@ def skills(ctx):
 @click.option(
     "--category",
     "-c",
-    type=click.Choice(["all", "recon", "exploitation", "reporting", "post_exploitation", "network", "payloads"]),
+    type=click.Choice(["all", "recon", "exploitation", "reporting", "post_exploitation", "network", "payloads", "chaining"]),
     default="all",
     help="Filter by category",
 )

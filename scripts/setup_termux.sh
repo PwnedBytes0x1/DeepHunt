@@ -107,7 +107,9 @@ step_install_core() {
         freetype \
         zlib \
         libzmq \
-        libczmq
+        libczmq \
+        binutils \
+        rust
 
     print_success "Core dependencies installed"
 }

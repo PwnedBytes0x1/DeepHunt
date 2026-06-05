@@ -13,6 +13,8 @@ from datetime import datetime
 
 import aiohttp
 
+from deephunt import HUNTS_DIR
+
 
 class ReconAgent:
     """Agent for reconnaissance tasks."""
@@ -27,7 +29,7 @@ class ReconAgent:
         self.hunt_id = hunt_id
         self.scope = scope
         self.bus = message_bus
-        self.hunt_dir = hunt_dir or Path.home() / "deephunt" / "deephunt_hunts" / hunt_id
+        self.hunt_dir = hunt_dir or HUNTS_DIR / hunt_id
         self.cache_dir = self.hunt_dir / "cache"
         self.assets = {
             "domains": [],
