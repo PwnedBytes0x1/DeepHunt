@@ -4,7 +4,10 @@ Handles passive and active reconnaissance with politeness engine.
 """
 
 import asyncio
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import subprocess
 import time
 from pathlib import Path

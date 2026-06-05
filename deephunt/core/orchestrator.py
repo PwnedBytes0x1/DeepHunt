@@ -4,7 +4,10 @@ Manages hunt lifecycle, spawns/kills agents, enforces approval gates.
 """
 
 import asyncio
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import time
 try:
     import psutil

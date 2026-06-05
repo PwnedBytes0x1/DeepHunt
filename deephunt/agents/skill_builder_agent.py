@@ -4,7 +4,10 @@ Dynamically generates new skills, scripts, and tools.
 """
 
 import asyncio
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from pathlib import Path
 from typing import Dict, Any
 

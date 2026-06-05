@@ -7,7 +7,10 @@ Rich colorized interface optimized for Termux and standard terminals.
 import asyncio
 import os
 import sys
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import click
 from pathlib import Path
 from typing import Optional

@@ -4,7 +4,10 @@ Handles global config, environment variables, and runtime settings.
 """
 
 import os
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, asdict, field

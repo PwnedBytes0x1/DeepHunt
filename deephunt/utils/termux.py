@@ -5,7 +5,10 @@ Handles permissions, notifications, wake locks, and storage.
 
 import os
 import subprocess
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 

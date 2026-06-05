@@ -23,6 +23,7 @@ html2text>=2020.1.16
 pydantic>=2.0.0
 pyyaml>=6.0.0
 python-dotenv>=1.0.0
+ujson>=5.0.0
 
 # System & Crypto
 cryptography>=41.0.0

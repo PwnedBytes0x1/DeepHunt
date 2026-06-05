@@ -110,67 +110,68 @@ make binary-termux
 
 ## Skills System
 
-Skills are Markdown files with YAML frontmatter, organized in the `skills/` directory.
+DeepHunt uses a modular Markdown-based skills system. Skills are stored as Markdown files with YAML frontmatter, providing the AI agent with domain-specific knowledge and methodologies.
+
+### Core Modules
+
+| Module | Purpose |
+|--------|---------|
+| **03-recon-osint** | Advanced attack surface mapping and target discovery |
+| **04-vuln-finding** | Systematic vulnerability identification (CVE, SAST, SCA) |
+| **05-web-exploit** | Web application attack vectors and methodologies |
+| **10-cloud-security** | Cloud-native (AWS/Azure/GCP) and container exploitation |
+| **12-ai-redteam** | Specialized techniques for attacking AI/ML models |
+| **20-owasp-top10** | Detailed manuals for the OWASP Top 10 categories |
+| **21-chaining** | Methodology for combining low-impact bugs into critical chains |
 
 ### Directory Structure
 
 ```
 skills/
-├── recon/
-│   ├── subdomain_enum.md
-│   ├── port_scanning.md
-│   └── web_fingerprinting.md
-├── exploitation/
-│   ├── sql_injection.md
-│   └── xss_detection.md
-├── reporting/
-│   └── hackerone_template.md
-├── payloads/
-│   └── xxe_payloads.md
-├── network/
-│   └── http_request_smuggling.md
-├── post_exploitation/
-│   └── lateral_movement.md
-├── 21-chaining/
-│   ├── chaining-methodology.md
-│   └── common-attack-chains.md
-└── registry.json
+├── 03-recon-osint/          # OSINT & Active Recon
+├── 04-vulnerability-finding/# Systematic discovery
+├── 05-web-exploitation/     # Web application attacks
+├── 20-owasp-top10/          # OWASP Top 10 Manuals
+├── 21-chaining/             # Attack Chaining
+└── ...
 ```
 
-### Creating Custom Skills
+### Skill Format (YAML Frontmatter)
 
-Create a `.md` file in any `skills/` subdirectory:
+Each skill file (`.md`) must include YAML frontmatter for the loader to identify it:
 
 ```markdown
 ---
-name: My Custom Skill
-category: recon
+name: SSRF to Cloud Metadata
+category: chaining
 version: "1.0"
-author: "your-handle"
-description: "What this skill does"
-commands:
-  - tool-name
+author: "PwnedBytes0x1"
+description: "Chaining SSRF to extract cloud IAM credentials"
 tags:
-  - tag1
-  - tag2
+  - ssrf
+  - cloud
+  - chaining
 ---
 
-# My Custom Skill
+# SSRF to Cloud Metadata
 
-Your skill content here in Markdown...
+Your methodology and technical details here...
 ```
 
-### Loading Skills
+### CLI Commands
 
 ```bash
-# List all skills
+# List all discovered skills
 dhunt skills list
 
-# Show skill details
-dhunt skills show sql_injection
+# Filter by category (e.g., recon, chaining)
+dhunt skills list --category chaining
 
-# Filter by category
-dhunt skills list --category exploitation
+# Show specific skill content
+dhunt skills show "Common Attack Chains"
+
+# Search for skills by keyword
+# (Coming in v1.2)
 ```
 
 ---
@@ -267,7 +268,7 @@ termux-wake-lock
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
@@ -275,7 +276,7 @@ We welcome contributions! Please see [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for gu
 
 MIT License - see [LICENSE](LICENSE) file.
 
-**Disclaimer**: The user bears full legal, ethical, and financial responsibility for the use of this tool.
+**Disclaimer**: The user bears full legal, ethical, and financial responsibility for the use of this tool. The author and contributors are not responsible for any damage caused by the use of this script.
 
 ---
 

@@ -6,7 +6,10 @@ Handles both system logging and hunt-specific immutable logging.
 import logging
 import hashlib
 import hmac
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import os
 from datetime import datetime
 from pathlib import Path

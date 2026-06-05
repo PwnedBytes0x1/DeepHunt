@@ -107,7 +107,7 @@ deeephunt/
 ├── pyproject.toml
 ├── Makefile
 ├── README.md
-└── CONTRIBUTIONS.md    # This file
+└── CONTRIBUTING.md     # This file
 ```
 
 ## Skills System
