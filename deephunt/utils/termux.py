@@ -251,3 +251,30 @@ class TermuxUtils:
             }
         except Exception:
             return {"total": 0, "used": 0, "free": 0, "total_gb": 0, "used_gb": 0, "free_gb": 0}
+
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get memory usage (fallback for psutil on Android)."""
+        try:
+            with open("/proc/meminfo", "r") as f:
+                lines = f.readlines()
+
+            mem_info = {}
+            for line in lines:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    name = parts[0].strip()
+                    value = parts[1].strip().split(" ")[0]
+                    mem_info[name] = int(value) * 1024  # Convert KB to bytes
+
+            total = mem_info.get("MemTotal", 0)
+            available = mem_info.get("MemAvailable", mem_info.get("MemFree", 0) + mem_info.get("Cached", 0))
+            used = total - available
+
+            return {
+                "total": total,
+                "available": available,
+                "used": used,
+                "percent": (used / total * 100) if total > 0 else 0
+            }
+        except Exception:
+            return {"total": 0, "available": 0, "used": 0, "percent": 0}

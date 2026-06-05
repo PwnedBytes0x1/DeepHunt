@@ -6,7 +6,10 @@ Manages hunt lifecycle, spawns/kills agents, enforces approval gates.
 import asyncio
 import json
 import time
-import psutil
+try:
+    import psutil
+except ImportError:
+    psutil = None
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
@@ -251,12 +254,16 @@ class Orchestrator:
         """Monitor memory usage and throttle if needed."""
         while True:
             try:
-                mem = psutil.virtual_memory()
-                if mem.used > self.memory_limit:
+                if psutil:
+                    mem_used = psutil.virtual_memory().used
+                else:
+                    mem_used = self.termux.get_memory_usage()["used"]
+
+                if mem_used > self.memory_limit:
                     await self.message_bus.put({
                         "type": "memory_pressure",
                         "action": "serialize",
-                        "used_mb": mem.used / (1024 * 1024),
+                        "used_mb": mem_used / (1024 * 1024),
                     })
 
                 # Check battery on Termux

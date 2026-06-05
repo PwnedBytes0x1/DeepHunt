@@ -135,7 +135,6 @@ step_install_python() {
         orjson \
         httpx[http2] \
         websockets \
-        psutil \
         schedule \
         cryptography \
         prompt-toolkit
