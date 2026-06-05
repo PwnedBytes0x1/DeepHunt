@@ -228,6 +228,9 @@ step_permissions() {
 step_setup_workspace() {
     print_status "Step 7/7: Setting up DeepHunt workspace..."
 
+    # Ensure pip bin directory is in PATH
+    export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+
     # Clone or update repository silently
     if [ -d "$WORKSPACE_DIR/.git" ]; then
         print_status "Updating existing DeepHunt installation..."
@@ -251,7 +254,6 @@ step_setup_workspace() {
         cd "$WORKSPACE_DIR"
         
         # Run pip install and capture output
-        # Check for success indicators (pip may return non-zero due to PATH warnings)
         pip_output=$(python -m pip install -e . 2>&1)
         
         # Check if installation actually succeeded
@@ -272,6 +274,29 @@ step_setup_workspace() {
     else
         print_warning "Configuration initialization failed"
         print_warning "You can run 'dhunt init' later to configure"
+    fi
+
+    # Show where dhunt command is installed
+    print_status "Checking dhunt command location..."
+    
+    # Ensure PATH includes local bin for current session
+    export PATH="$HOME/.local/bin:$PATH"
+    
+    if command -v dhunt >/dev/null 2>&1; then
+        print_success "dhunt command is available!"
+    elif [ -f "$HOME/.local/bin/dhunt" ]; then
+        print_warning "dhunt installed in ~/.local/bin"
+        # Add to bashrc for persistence
+        if ! grep -q "\.local/bin" ~/.bashrc 2>/dev/null; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+            print_success "Added ~/.local/bin to PATH in ~/.bashrc"
+        fi
+        print_warning "Run 'source ~/.bashrc' or restart Termux to use dhunt"
+    elif [ -f "$PREFIX/bin/dhunt" ]; then
+        print_success "dhunt installed in $PREFIX/bin"
+    else
+        print_warning "dhunt command not found in PATH"
+        print_warning "Run: python -m deephunt.cli --help"
     fi
 
     print_success "Workspace setup complete"
