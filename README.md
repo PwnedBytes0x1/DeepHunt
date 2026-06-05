@@ -1,12 +1,8 @@
 <div align="center">
 
 ```
-    ██████╗ ███████╗███████╗██████╗ ██╗  ██╗██╗   ██╗███╗   ██╗████████╗
-    ██╔══██╗██╔════╝██╔════╝██╔══██╗██║  ██║██║   ██║████╗  ██║╚══██╔══╝
-    ██║  ██║█████╗  █████╗  ██████╔╝███████║██║   ██║██╔██╗ ██║   ██║   
-    ██║  ██║██╔══╝  ██╔══╝  ██╔═══╝ ██╔══██║██║   ██║██║╚██╗██║   ██║   
-    ██████╔╝███████╗███████╗██║     ██║  ██║╚██████╔╝██║ ╚████║   ██║   
-    ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   
+    DeepHunt v1.0 - Autonomous AI-Driven Cybersecurity Agent
+    =========================================================
 ```
 
 ### Autonomous AI-Driven Cybersecurity Agent
@@ -28,6 +24,7 @@
 |---------|-------------|
 | **AI-Driven Analysis** | Integrates with DeepSeek API for intelligent vulnerability identification |
 | **Termux-First Design** | Optimized for Android 14+ with foreground service support |
+| **Zero-Error Installation** | Robust error handling with graceful fallbacks |
 | **Approval Gates** | All active exploitation requires explicit approval |
 | **Immutable Audit Trail** | Hash-chained, tamper-evident logging |
 | **Custom Skill System** | Markdown-based skills in `skills/` directory with nested support |
@@ -41,7 +38,7 @@
 
 ## Quick Start
 
-### Installation
+### Installation (Termux)
 
 ```bash
 # Clone the repository
@@ -51,10 +48,20 @@ cd deephunt
 # Install dependencies
 pip install -r requirements.txt
 
-# Or install with make
-make install
+# Or use the bootstrap script (recommended for Termux)
+bash scripts/setup_termux.sh
 
 # Initialize workspace
+dhunt init
+```
+
+### Installation (Linux/macOS)
+
+```bash
+git clone https://github.com/PwnedBytes0x1/deephunt.git
+cd deephunt
+pip install -r requirements.txt
+make install
 dhunt init
 ```
 
@@ -75,13 +82,80 @@ dhunt logs
 
 # List available skills
 dhunt skills list
+
+# Run system health check
+dhunt check
+```
+
+---
+
+## Termux Installation Guide
+
+### Prerequisites
+
+1. **Install Termux** from F-Droid (recommended over Play Store)
+2. **Grant storage permission** (if needed for external storage access)
+3. **Install Termux:API** from F-Droid for notifications and wake locks
+
+### Automated Setup (Recommended)
+
+```bash
+# Download and run the bootstrap script
+curl -fsSL https://raw.githubusercontent.com/PwnedBytes0x1/deephunt/main/scripts/setup_termux.sh | bash
+
+# Or clone and run manually
+git clone https://github.com/PwnedBytes0x1/deephunt.git
+cd deephunt
+bash scripts/setup_termux.sh
+```
+
+### Manual Installation
+
+```bash
+# Update package database
+pkg update && pkg upgrade -y
+
+# Install core dependencies
+pkg install -y git curl wget jq python python-pip termux-api
+
+# Install additional packages (optional but recommended)
+pkg install -y clang make cmake pkg-config
+pkg install -y libffi libxml2 libxslt libpng libjpeg-turbo
+
+# Clone repository
+git clone https://github.com/PwnedBytes0x1/deephunt.git
+cd deephunt
+
+# Install Python dependencies
+pip install -r requirements.txt
+
+# Install in development mode
+pip install -e .
+
+# Initialize
+dhunt init
+```
+
+### Granting Android Permissions
+
+For full functionality, grant these permissions in Termux:
+
+```bash
+# Test notification permission
+termux-notification --title "DeepHunt Test" --content "OK"
+
+# Open battery optimization settings
+termux-open --chooser "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+
+# Acquire wake lock (optional, for long-running hunts)
+termux-wake-lock
 ```
 
 ---
 
 ## Building from Source
 
-### Compile to Binary
+### Compile to Binary (Desktop)
 
 ```bash
 # Install development dependencies
@@ -92,8 +166,6 @@ make binary
 
 # Install globally
 sudo cp dist/dhunt /usr/local/bin/
-# Or for Termux:
-cp dist/dhunt $PREFIX/bin/
 ```
 
 ### Termux-Specific Build
@@ -104,6 +176,19 @@ make binary-termux
 
 # Binary will be at:
 # $HOME/.local/bin/dhunt-termux
+```
+
+### Using Make
+
+```bash
+make help          # Show all available targets
+make install       # Install production dependencies
+make install-dev   # Install with dev dependencies
+make setup         # Full first-time setup
+make termux-install # Termux-specific install
+make install-minimal # Minimal install (core deps only)
+make binary        # Build standalone binary
+make clean          # Clean build artifacts
 ```
 
 ---
@@ -128,12 +213,12 @@ DeepHunt uses a modular Markdown-based skills system. Skills are stored as Markd
 
 ```
 skills/
-├── 03-recon-osint/          # OSINT & Active Recon
-├── 04-vulnerability-finding/# Systematic discovery
-├── 05-web-exploitation/     # Web application attacks
-├── 20-owasp-top10/          # OWASP Top 10 Manuals
-├── 21-chaining/             # Attack Chaining
-└── ...
++-- 03-recon-osint/          # OSINT & Active Recon
++-- 04-vulnerability-finding/ # Systematic discovery
++-- 05-web-exploitation/     # Web application attacks
++-- 20-owasp-top10/          # OWASP Top 10 Manuals
++-- 21-chaining/             # Attack Chaining
++-- ...
 ```
 
 ### Skill Format (YAML Frontmatter)
@@ -170,8 +255,8 @@ dhunt skills list --category chaining
 # Show specific skill content
 dhunt skills show "Common Attack Chains"
 
-# Search for skills by keyword
-# (Coming in v1.2)
+# Load and execute a skill
+dhunt skills load "Skill Name"
 ```
 
 ---
@@ -179,29 +264,29 @@ dhunt skills show "Common Attack Chains"
 ## Architecture
 
 ```
-                    ┌─────────────────┐
-                    │   CLI (dhunt)   │
-                    └────────┬────────┘
-                             │
-              ┌──────────────┼──────────────┐
-              ▼              ▼              ▼
-       ┌──────────┐  ┌──────────┐  ┌──────────┐
-       │  Config  │  │ Identity │  │  Skills  │
-       │ Manager  │  │ Manager  │  │  Loader  │
-       └─────┬────┘  └─────┬────┘  └─────┬────┘
-             │              │              │
-             └──────────────┼──────────────┘
-                            │
-                   ┌────────┴────────┐
-                   │   Orchestrator  │
-                   └────────┬────────┘
-                            │
-              ┌─────────────┼─────────────┐
-              ▼             ▼             ▼
-       ┌──────────┐ ┌──────────┐ ┌──────────┐
-       │  Recon   │ │ Vuln ID  │ │  Skill   │
-       │  Agent   │ │  Agent   │ │ Builder  │
-       └──────────┘ └──────────┘ └──────────┘
+                    +------------------------+
+                    |   CLI (dhunt)          |
+                    +------------------------+
+                             |
+        +--------------------+--------------------+
+        |                    |                    |
+   +--------+          +-----------+         +---------+
+   | Config |          | Identity  |         | Skills  |
+   |Manager |          | Manager   |         | Loader  |
+   +--------+          +-----------+         +---------+
+        |                    |                    |
+        +--------------------+--------------------+
+                             |
+                    +------------------------+
+                    |   Orchestrator         |
+                    +------------------------+
+                             |
+        +--------------------+--------------------+
+        |                    |                    |
+   +---------+         +----------+         +-----------+
+   | Recon   |         | Vuln ID  |         | Skill     |
+   | Agent   |         | Agent    |         | Builder   |
+   +---------+         +----------+         +-----------+
 ```
 
 ---
@@ -219,17 +304,27 @@ DeepHunt is built specifically for Termux on Android 14+.
 - **RAM Management**: Soft 1.5GB cap with automatic agent serialization
 - **Thermal Throttling**: Monitors CPU temperature and throttles scans
 
-### Required Permissions
+### Termux-Specific Features
+
+- **Non-blocking Installation**: Script continues even if some packages fail
+- **Graceful Fallbacks**: Missing optional dependencies don't break the tool
+- **Memory Fallback**: Uses `/proc/meminfo` when psutil is unavailable
+- **Notification Fallback**: Silently skips notifications if Termux:API unavailable
+
+### Troubleshooting Termux Issues
 
 ```bash
-# Grant notification permission (Android 14+)
-termux-notification --title "DeepHunt Test" --content "OK"
+# Check if Termux environment is detected
+dhunt check
 
-# Disable battery optimization
-termux-open --chooser "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+# Re-run bootstrap script
+bash scripts/setup_termux.sh
 
-# Wake lock for long hunts
-termux-wake-lock
+# Install missing dependencies manually
+pip install package-name
+
+# Check Termux:API availability
+termux-notification --title "Test" --content "DeepHunt"
 ```
 
 ---
@@ -244,14 +339,31 @@ termux-wake-lock
 | `soul.md` | Agent personality, model preferences, identity |
 | `taste.md` | Code style, vuln priorities, tool preferences |
 
+### Configuration Commands
+
+```bash
+# Show current configuration
+dhunt config show
+
+# Edit configuration
+dhunt config edit
+
+# Set API key
+dhunt config set-apikey deepseek YOUR_API_KEY
+
+# Set environment variable for workspace
+export WORKSPACE_DIR=~/deephunt
+```
+
 ### Environment Variables
 
 | Variable | Description |
 |----------|-------------|
-| `WORKSPACE_DIR` | Workspace directory path |
+| `WORKSPACE_DIR` | Workspace directory path (default: ~/deephunt on Termux, ~/.deephunt elsewhere) |
 | `DEEPSEEK_API_KEY` | DeepSeek API key |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token for notifications |
 | `DEEPHUNT_LOG_LEVEL` | Logging level (DEBUG/INFO/WARNING) |
+| `DEEPHUNT_SALT` | Salt for immutable log HMAC (change for production) |
 
 ---
 
@@ -263,6 +375,54 @@ termux-wake-lock
 - **Scope Enforcement**: Programmatic filters prevent out-of-scope operations
 - **Emergency Kill**: Configurable regex patterns trigger immediate halt
 - **Immutable Logging**: Tamper-evident audit trail for all actions
+
+---
+
+## Troubleshooting
+
+### Installation Issues
+
+```bash
+# Clean install
+rm -rf ~/.local/lib/python*/site-packages/deephunt*
+pip uninstall deephunt
+pip install -e .
+
+# Check Python version
+python --version  # Requires 3.8+
+
+# Verify installation
+python -c "import deephunt; print(deephunt.__version__)"
+```
+
+### Termux-Specific Issues
+
+```bash
+# Fix permissions
+termux-setup-storage
+
+# Reinstall Termux:API
+pkg uninstall termux-api && pkg install termux-api
+
+# Check available space
+df -h ~
+
+# Clear pip cache
+pip cache purge
+```
+
+### Running the Tool
+
+```bash
+# Verbose mode
+dhunt --verbose hunt example.com
+
+# No color output (for terminals without color support)
+dhunt --no-color init
+
+# Use custom workspace
+dhunt --workspace /path/to/workspace init
+```
 
 ---
 

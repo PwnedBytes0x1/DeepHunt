@@ -30,4 +30,4 @@ cryptography>=41.0.0
 schedule>=1.2.0
 
 # Telegram Bot (optional)
-python-telegram-bot[ext]>=20.0.0; platform_system != "Windows" or platform_system == "Windows"
+python-telegram-bot>=20.0

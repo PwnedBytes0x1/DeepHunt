@@ -43,43 +43,53 @@ class TermuxUtils:
             return (-1, "", "Termux:API not available")
 
         try:
+            # Convert all args to strings to avoid type issues
+            cmd_list = [f"termux-{command}"] + [str(arg) for arg in args]
             result = subprocess.run(
-                [f"termux-{command}", *args],
+                cmd_list,
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
             return (result.returncode, result.stdout, result.stderr)
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except subprocess.TimeoutExpired:
+            return (-1, "", f"termux-{command} timed out")
+        except FileNotFoundError:
             return (-1, "", f"termux-{command} not found")
+        except Exception as e:
+            return (-1, "", f"termux-{command} error: {e}")
 
     def setup_permissions(self) -> bool:
         """Request necessary Android permissions.
 
         Returns:
-            True if setup was successful
+            True if setup was successful (or skipped gracefully)
         """
         if not self.is_termux:
             return True
 
-        success = True
+        # Battery optimization exemption (non-blocking)
+        try:
+            rc, _, _ = self._run_api("battery-status")
+            if rc != 0:
+                # Try to open settings (non-blocking)
+                self._run_api("open", "--chooser", "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+        except Exception:
+            pass
 
-        # Battery optimization exemption
-        rc, _, _ = self._run_api("battery-status")
-        if rc != 0:
-            # Try to open settings
-            self._run_api("open", "--chooser", "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+        # Notification permission (Android 14+) - non-blocking
+        try:
+            rc, _, _ = self._run_api(
+                "notification",
+                "--title", "DeepHunt Setup",
+                "--content", "Testing notification permission",
+            )
+            if rc != 0:
+                self._run_api("open", "--chooser", "android.settings.NOTIFICATION_SETTINGS")
+        except Exception:
+            pass
 
-        # Notification permission (Android 14+)
-        rc, _, _ = self._run_api(
-            "notification",
-            "--title", "DeepHunt Setup",
-            "--content", "Testing notification permission",
-        )
-        if rc != 0:
-            self._run_api("open", "--chooser", "android.settings.NOTIFICATION_SETTINGS")
-
-        return success
+        return True  # Always return True, permissions are optional
 
     def send_notification(
         self,

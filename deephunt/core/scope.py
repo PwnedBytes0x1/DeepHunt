@@ -58,15 +58,10 @@ class ScopeFilter:
         parsed = urlparse(url)
         hostname = parsed.hostname or url
 
-        # Check deny list first
+        # Check deny list first (includes emergency kill patterns)
         for pattern in self.deny:
             if pattern.search(hostname) or pattern.search(url):
                 return False, f"DENIED: matches deny pattern {pattern.pattern}"
-
-        # Check deny list for emergency kill patterns
-        for pattern in self.deny:
-            if pattern.search(hostname) or pattern.search(url):
-                return False, f"DENIED: emergency kill pattern matched"
 
         # Check allow list
         for pattern in self.allow:

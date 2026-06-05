@@ -4,18 +4,21 @@ Manages hunt lifecycle, spawns/kills agents, enforces approval gates.
 """
 
 import asyncio
+import time
+from pathlib import Path
+from typing import Dict, Any, Optional, List
+from datetime import datetime
+
+# Optional imports with graceful fallback
 try:
     import ujson as json
 except ImportError:
     import json
-import time
+
 try:
     import psutil
 except ImportError:
     psutil = None
-from pathlib import Path
-from typing import Dict, Any, Optional, List
-from datetime import datetime
 
 from deephunt.core.identity import Identity
 from deephunt.core.scope import ScopeFilter
