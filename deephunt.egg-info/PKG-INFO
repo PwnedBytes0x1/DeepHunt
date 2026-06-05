@@ -1,0 +1,341 @@
+Metadata-Version: 2.4
+Name: deephunt
+Version: 1.0.0
+Summary: DeepHunt - Autonomous AI-Driven Cybersecurity Agent for Termux
+Author-email: PwnedBytes0x1 <PwnedBytes0x1@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/PwnedBytes0x1/deephunt
+Project-URL: Repository, https://github.com/PwnedBytes0x1/deephunt.git
+Project-URL: Issues, https://github.com/PwnedBytes0x1/deephunt/issues
+Project-URL: Wiki, https://github.com/PwnedBytes0x1/deephunt/wiki
+Keywords: cybersecurity,bug-bounty,penetration-testing,ai-agent,autonomous,termux,android,security,hacking,reconnaissance
+Classifier: Development Status :: 4 - Beta
+Classifier: Environment :: Console
+Classifier: Intended Audience :: Information Technology
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: Android
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Security
+Classifier: Topic :: System :: Networking
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: click>=8.0
+Requires-Dist: rich>=13.0
+Requires-Dist: aiohttp>=3.8
+Requires-Dist: aiofiles>=22.0
+Requires-Dist: beautifulsoup4>=4.11
+Requires-Dist: lxml>=4.9
+Requires-Dist: html2text>=2020.1.16
+Requires-Dist: requests>=2.28
+Requires-Dist: urllib3>=1.26
+Requires-Dist: pydantic>=2.0
+Requires-Dist: pyyaml>=6.0
+Requires-Dist: python-dotenv>=1.0
+Requires-Dist: orjson>=3.8
+Requires-Dist: httpx[http2]>=0.25
+Requires-Dist: websockets>=11.0
+Requires-Dist: psutil>=5.9
+Requires-Dist: schedule>=1.2
+Requires-Dist: cryptography>=41.0
+Requires-Dist: prompt-toolkit>=3.0
+Provides-Extra: telegram
+Requires-Dist: python-telegram-bot[ext]>=20.0; extra == "telegram"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21; extra == "dev"
+Requires-Dist: pytest-cov>=4.0; extra == "dev"
+Requires-Dist: black>=23.0; extra == "dev"
+Requires-Dist: flake8>=6.0; extra == "dev"
+Requires-Dist: mypy>=1.0; extra == "dev"
+Requires-Dist: pyinstaller>=5.13; extra == "dev"
+Dynamic: license-file
+
+<div align="center">
+
+```
+    ██████╗ ███████╗███████╗██████╗ ██╗  ██╗██╗   ██╗███╗   ██╗████████╗
+    ██╔══██╗██╔════╝██╔════╝██╔══██╗██║  ██║██║   ██║████╗  ██║╚══██╔══╝
+    ██║  ██║█████╗  █████╗  ██████╔╝███████║██║   ██║██╔██╗ ██║   ██║   
+    ██║  ██║██╔══╝  ██╔══╝  ██╔═══╝ ██╔══██║██║   ██║██║╚██╗██║   ██║   
+    ██████╔╝███████╗███████╗██║     ██║  ██║╚██████╔╝██║ ╚████║   ██║   
+    ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝   
+```
+
+### Autonomous AI-Driven Cybersecurity Agent
+
+[![Version](https://img.shields.io/badge/version-1.0.0-cyan?style=flat-square)](https://github.com/PwnedBytes0x1/deephunt)
+[![Python](https://img.shields.io/badge/python-3.8+-blue?style=flat-square&logo=python)](https://python.org)
+[![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux-green?style=flat-square&logo=android)](https://termux.dev)
+[![License](https://img.shields.io/badge/license-MIT-purple?style=flat-square)](LICENSE)
+
+**Designed for authorized bug bounty hunting and penetration testing on Android via Termux.**
+
+</div>
+
+---
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| **AI-Driven Analysis** | Integrates with DeepSeek API for intelligent vulnerability identification |
+| **Termux-First Design** | Optimized for Android 14+ with foreground service support |
+| **Approval Gates** | All active exploitation requires explicit approval |
+| **Immutable Audit Trail** | Hash-chained, tamper-evident logging |
+| **Custom Skill System** | Markdown-based skills in `skills/` directory with nested support |
+| **Binary Compilation** | Build standalone executables with PyInstaller |
+| **Multi-Agent Architecture** | Lazy-loaded agents to minimize RAM usage |
+| **Scope Enforcement** | Programmatic regex + domain filter for every request |
+| **Cost Management** | Token budget tracking with per-hunt limits |
+
+---
+
+## Quick Start
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/PwnedBytes0x1/deephunt.git
+cd deephunt
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Or install with make
+make install
+
+# Initialize workspace
+dhunt init
+```
+
+### First Hunt
+
+```bash
+# Set your API key
+dhunt config set-apikey deepseek sk-your-key-here
+
+# Start a hunt
+dhunt hunt example.com --scope "*.example.com" --aggression recon
+
+# Check status
+dhunt status
+
+# View logs
+dhunt logs
+
+# List available skills
+dhunt skills list
+```
+
+---
+
+## Building from Source
+
+### Compile to Binary
+
+```bash
+# Install development dependencies
+pip install -e ".[dev]"
+
+# Build standalone binary
+make binary
+
+# Install globally
+sudo cp dist/dhunt /usr/local/bin/
+# Or for Termux:
+cp dist/dhunt $PREFIX/bin/
+```
+
+### Termux-Specific Build
+
+```bash
+# Optimized for Android/Termux
+make binary-termux
+
+# Binary will be at:
+# $HOME/.local/bin/dhunt-termux
+```
+
+---
+
+## Skills System
+
+Skills are Markdown files with YAML frontmatter, organized in the `skills/` directory.
+
+### Directory Structure
+
+```
+skills/
+├── recon/
+│   ├── subdomain_enum.md
+│   ├── port_scanning.md
+│   └── web_fingerprinting.md
+├── exploitation/
+│   ├── sql_injection.md
+│   └── xss_detection.md
+├── reporting/
+│   └── hackerone_template.md
+├── payloads/
+│   └── xxe_payloads.md
+├── network/
+│   └── http_request_smuggling.md
+├── post_exploitation/
+│   └── lateral_movement.md
+└── registry.json
+```
+
+### Creating Custom Skills
+
+Create a `.md` file in any `skills/` subdirectory:
+
+```markdown
+---
+name: My Custom Skill
+category: recon
+version: "1.0"
+author: "your-handle"
+description: "What this skill does"
+commands:
+  - tool-name
+tags:
+  - tag1
+  - tag2
+---
+
+# My Custom Skill
+
+Your skill content here in Markdown...
+```
+
+### Loading Skills
+
+```bash
+# List all skills
+dhunt skills list
+
+# Show skill details
+dhunt skills show sql_injection
+
+# Filter by category
+dhunt skills list --category exploitation
+```
+
+---
+
+## Architecture
+
+```
+                    ┌─────────────────┐
+                    │   CLI (dhunt)   │
+                    └────────┬────────┘
+                             │
+              ┌──────────────┼──────────────┐
+              ▼              ▼              ▼
+       ┌──────────┐  ┌──────────┐  ┌──────────┐
+       │  Config  │  │ Identity │  │  Skills  │
+       │ Manager  │  │ Manager  │  │  Loader  │
+       └─────┬────┘  └─────┬────┘  └─────┬────┘
+             │              │              │
+             └──────────────┼──────────────┘
+                            │
+                   ┌────────┴────────┐
+                   │   Orchestrator  │
+                   └────────┬────────┘
+                            │
+              ┌─────────────┼─────────────┐
+              ▼             ▼             ▼
+       ┌──────────┐ ┌──────────┐ ┌──────────┐
+       │  Recon   │ │ Vuln ID  │ │  Skill   │
+       │  Agent   │ │  Agent   │ │ Builder  │
+       └──────────┘ └──────────┘ └──────────┘
+```
+
+---
+
+## Termux Compatibility
+
+DeepHunt is built specifically for Termux on Android 14+.
+
+### Android 14 Considerations
+
+- **Foreground Services**: Runs as Termux foreground process with `termux-wake-lock`
+- **Notifications**: Uses `termux-notification` for approval requests
+- **Scoped Storage**: All data stays within `$HOME` (Termux internal storage)
+- **Battery Optimization**: Disables battery optimization for long hunts
+- **RAM Management**: Soft 1.5GB cap with automatic agent serialization
+- **Thermal Throttling**: Monitors CPU temperature and throttles scans
+
+### Required Permissions
+
+```bash
+# Grant notification permission (Android 14+)
+termux-notification --title "DeepHunt Test" --content "OK"
+
+# Disable battery optimization
+termux-open --chooser "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
+
+# Wake lock for long hunts
+termux-wake-lock
+```
+
+---
+
+## Configuration
+
+### Identity Files (`.identity/`)
+
+| File | Purpose |
+|------|---------|
+| `user.md` | Operator profile, preferences, aggression level |
+| `soul.md` | Agent personality, model preferences, identity |
+| `taste.md` | Code style, vuln priorities, tool preferences |
+
+### Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `WORKSPACE_DIR` | Workspace directory path |
+| `DEEPSEEK_API_KEY` | DeepSeek API key |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token |
+| `DEEPHUNT_LOG_LEVEL` | Logging level (DEBUG/INFO/WARNING) |
+
+---
+
+## Safety & Ethics
+
+> **This tool is designed exclusively for authorized bug bounty hunting and penetration testing with explicit written permission.**
+
+- **Action Gating**: All active exploitation requires explicit approval
+- **Scope Enforcement**: Programmatic filters prevent out-of-scope operations
+- **Emergency Kill**: Configurable regex patterns trigger immediate halt
+- **Immutable Logging**: Tamper-evident audit trail for all actions
+
+---
+
+## Contributing
+
+We welcome contributions! Please see [CONTRIBUTIONS.md](CONTRIBUTIONS.md) for guidelines.
+
+---
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file.
+
+**Disclaimer**: The user bears full legal, ethical, and financial responsibility for the use of this tool.
+
+---
+
+<div align="center">
+
+**[PwnedBytes0x1](https://hackerone.com/PwnedBytes0x1)**
+
+</div>
