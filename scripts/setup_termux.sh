@@ -245,19 +245,31 @@ step_setup_workspace() {
         fi
     fi
 
-    # Install DeepHunt in development mode silently
+    # Install DeepHunt in development mode
     if [ -d "$WORKSPACE_DIR" ]; then
         print_status "Installing DeepHunt package..."
         cd "$WORKSPACE_DIR"
-        if ! python -m pip install -e . >/dev/null 2>&1; then
-            print_warning "Package installation failed"
-            print_warning "You can run directly: python -m deephunt.cli"
+        
+        # Run pip install and capture output
+        # Check for success indicators (pip may return non-zero due to PATH warnings)
+        pip_output=$(python -m pip install -e . 2>&1)
+        
+        # Check if installation actually succeeded
+        if echo "$pip_output" | grep -qE "(Successfully installed|Requirement already satisfied)"; then
+            print_success "DeepHunt package installed successfully"
+        elif python -c "import deephunt" 2>/dev/null; then
+            print_success "DeepHunt package installed"
+        else
+            print_warning "Package installation may have failed"
+            print_warning "Try manually: cd ~/deephunt && pip install -e ."
         fi
     fi
 
-    # Initialize workspace silently
+    # Initialize workspace
     print_status "Initializing DeepHunt configuration..."
-    if ! python -m deephunt.cli init >/dev/null 2>&1; then
+    if python -m deephunt.cli init >/dev/null 2>&1; then
+        print_success "DeepHunt configuration initialized"
+    else
         print_warning "Configuration initialization failed"
         print_warning "You can run 'dhunt init' later to configure"
     fi
