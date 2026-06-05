@@ -209,7 +209,9 @@ class TermuxUtils:
             with open("/sys/class/power_supply/battery/status") as f:
                 status = f.read().strip().lower()
             return {"percentage": percentage, "status": status}
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError, ValueError) as e:
+            import logging
+            logging.getLogger(__name__).debug(f"Could not read battery sysfs: {e}")
             return {"status": "unknown", "percentage": 100}
 
     def get_thermal_status(self) -> Dict[str, Any]:

@@ -4,19 +4,22 @@ Handles passive and active reconnaissance with politeness engine.
 """
 
 import asyncio
-try:
-    import ujson as json
-except ImportError:
-    import json
+import logging
 import subprocess
-import time
 from pathlib import Path
 from typing import Dict, Any, Optional
 from datetime import datetime
 
+try:
+    import ujson as json
+except ImportError:
+    import json
+
 import aiohttp
 
 from deephunt import HUNTS_DIR
+
+logger = logging.getLogger(__name__)
 
 
 class ReconAgent:
@@ -102,8 +105,8 @@ class ReconAgent:
                 with open(cache_file) as f:
                     self.assets["domains"] = json.load(f)
                 return
-            except (json.JSONDecodeError, IOError):
-                pass
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning(f"Failed to load cache {cache_file}: {e}")
 
         try:
             result = await asyncio.to_thread(
@@ -123,9 +126,10 @@ class ReconAgent:
                             "ip": data.get("ip", None),
                             "discovered_at": datetime.utcnow().isoformat(),
                         })
-                    except json.JSONDecodeError:
-                        pass
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+                    except json.JSONDecodeError as e:
+                        logger.debug(f"Failed to parse subfinder output line: {e}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            logger.info(f"Subfinder not available: {e}")
             await self._fallback_dns_enum(target)
 
         # Cache results
@@ -133,8 +137,8 @@ class ReconAgent:
         try:
             with open(cache_file, "w") as f:
                 json.dump(self.assets["domains"], f)
-        except IOError:
-            pass
+        except IOError as e:
+            logger.warning(f"Failed to save cache {cache_file}: {e}")
 
     async def _certificate_transparency(self):
         """Query certificate transparency logs."""
@@ -161,8 +165,8 @@ class ReconAgent:
                                     "ip": None,
                                     "discovered_at": datetime.utcnow().isoformat(),
                                 })
-        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError):
-            pass
+        except (aiohttp.ClientError, asyncio.TimeoutError, json.JSONDecodeError) as e:
+            logger.debug(f"Certificate transparency lookup failed: {e}")
 
     async def _web_archive_crawl(self):
         """Crawl web archives for endpoints."""
@@ -185,8 +189,8 @@ class ReconAgent:
                         "source": "gau",
                         "discovered_at": datetime.utcnow().isoformat(),
                     })
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass  # Will be handled by crawler agent
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            logger.info(f"gau not available: {e}")
 
     async def _web_fingerprinting(self):
         """Fingerprint web technologies."""
@@ -212,10 +216,10 @@ class ReconAgent:
                                 "confidence": tech.get("confidence", 0.5),
                                 "source": "httpx",
                             })
-                    except json.JSONDecodeError:
-                        pass
-        except (subprocess.TimeoutExpired, FileNotFoundError):
-            pass
+                    except json.JSONDecodeError as e:
+                        logger.debug(f"Failed to parse httpx output: {e}")
+        except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+            logger.info(f"httpx not available: {e}")
 
     async def _fallback_dns_enum(self, target: str):
         """Python-based DNS enumeration fallback."""
@@ -228,7 +232,8 @@ class ReconAgent:
         try:
             with open(assets_file) as f:
                 existing = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError):
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.debug(f"Creating new assets file: {e}")
             existing = {}
 
         existing.update({

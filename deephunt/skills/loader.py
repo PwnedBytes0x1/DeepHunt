@@ -12,7 +12,6 @@ try:
     import ujson as json
 except ImportError:
     import json
-import re
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional

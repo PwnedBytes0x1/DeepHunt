@@ -10,7 +10,7 @@ except ImportError:
     import json
 from pathlib import Path
 from typing import Dict, Any, Optional
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, field
 
 
 @dataclass

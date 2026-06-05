@@ -95,8 +95,12 @@ class ImmutableLog:
                 if lines:
                     last_entry = json.loads(lines[-1])
                     return last_entry.get("this_hash", "0" * 64)
-        except (json.JSONDecodeError, IOError):
-            pass
+        except json.JSONDecodeError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to parse last log entry: {e}")
+        except IOError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to read log file: {e}")
 
         return "0" * 64
 

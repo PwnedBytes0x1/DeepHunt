@@ -5,7 +5,6 @@ Rich colorized interface optimized for Termux and standard terminals.
 """
 
 import asyncio
-import os
 import sys
 try:
     import ujson as json
@@ -14,7 +13,6 @@ except ImportError:
 import click
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
@@ -25,8 +23,6 @@ from rich import box
 
 from deephunt import (
     __version__,
-    __author__,
-    __description__,
     WORKSPACE_DIR,
     IDENTITY_DIR,
     HUNTS_DIR,

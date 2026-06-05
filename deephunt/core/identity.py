@@ -7,6 +7,9 @@ import yaml
 from pathlib import Path
 from typing import Dict, Any, Optional
 from dataclasses import dataclass, field
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -172,8 +175,10 @@ class IdentityManager:
                     data = yaml.safe_load(filepath.read_text())
                     if data:
                         setattr(identity, section, data)
-                except Exception:
-                    pass
+                except yaml.YAMLError as e:
+                    logger.warning(f"Failed to parse {filename}: {e}")
+                except Exception as e:
+                    logger.error(f"Unexpected error loading {filename}: {e}")
 
         # Format identity anchor with handle
         if "identity_anchor" in identity.soul:
@@ -206,8 +211,10 @@ class IdentityManager:
         if filepath.exists():
             try:
                 existing = yaml.safe_load(filepath.read_text()) or {}
-            except Exception:
-                pass
+            except yaml.YAMLError as e:
+                logger.warning(f"Failed to parse {filepath}: {e}")
+            except Exception as e:
+                logger.error(f"Unexpected error loading {filepath}: {e}")
 
         # Merge and save
         existing.update(data)
