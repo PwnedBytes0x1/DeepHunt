@@ -40,7 +40,7 @@ from deephunt.core.orchestrator import Orchestrator
 from deephunt.core.config import ConfigManager
 from deephunt.skills.loader import SkillLoader
 from deephunt.utils.termux import TermuxUtils
-from deephunt.utils.banner import get_banner, get_small_banner
+from deephunt.utils.banner import get_banner
 from deephunt.utils.logger import setup_logging
 
 # Rich console for beautiful output
@@ -140,7 +140,7 @@ def init(ctx, force, minimal):
     workspace = Path(ctx.obj["workspace"])
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     # Check if already initialized
@@ -259,7 +259,7 @@ def hunt(ctx, target, scope, exclude, aggression, budget, dry_run, from_program)
     workspace = Path(ctx.obj["workspace"])
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     # Validate workspace is initialized
@@ -359,7 +359,7 @@ def status(ctx, hunt_id):
     workspace = Path(ctx.obj["workspace"])
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     hunts_dir = workspace / "deephunt_hunts"
@@ -570,7 +570,7 @@ def skills_list(ctx, category, detail):
     project_skills_dir = Path(__file__).parent.parent / "skills"
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     # Discover all skills from all sources
@@ -722,7 +722,7 @@ def config_show(ctx):
     config_data = config_mgr.load_config()
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     table = Table(
@@ -805,7 +805,7 @@ def config_set_apikey(ctx, provider, api_key):
 def check(ctx):
     """Run system health check."""
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner())
     console.print()
 
     console.print(f"[bold {COLORS['primary']}]Running health check...[/bold {COLORS['primary']}]")
