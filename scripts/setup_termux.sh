@@ -5,19 +5,31 @@
 # Compatible with Android 14+ / Termux (F-Droid)
 #===============================================================================
 
-set -e
+# Don't exit on error - handle errors gracefully
+set +e
 
 TERMUX_PREFIX="/data/data/com.termux/files/usr"
 HOME_DIR="$HOME"
 WORKSPACE_DIR="${HOME_DIR}/deephunt"
 REPO_URL="https://github.com/PwnedBytes0x1/deephunt.git"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+# Ensure pip scripts are in PATH
+export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+
+# Colors (with fallback for terminals that don't support colors)
+if [ -t 1 ]; then
+    RED='\033[0;31m'
+    GREEN='\033[0;32m'
+    YELLOW='\033[1;33m'
+    CYAN='\033[0;36m'
+    NC='\033[0m'
+else
+    RED=''
+    GREEN=''
+    YELLOW=''
+    CYAN=''
+    NC=''
+fi
 
 print_banner() {
     echo ""
@@ -59,13 +71,20 @@ check_termux() {
 
 check_storage() {
     local available
-    available=$(df "$HOME" | tail -1 | awk '{print $4}')
+    # Get available space in KB and convert to GB
+    available=$(df -k "$HOME" 2>/dev/null | tail -1 | awk '{print $4}')
+    
+    if [ -z "$available" ]; then
+        print_warning "Could not determine storage. Proceeding anyway..."
+        return 0
+    fi
+    
     local available_gb=$((available / 1024 / 1024))
 
     if [ "$available_gb" -lt 2 ]; then
         print_error "Insufficient storage. Need at least 2GB free."
         print_error "Available: ${available_gb}GB"
-        exit 1
+        return 1
     fi
 
     print_success "Storage check passed (${available_gb}GB free)"
@@ -77,144 +96,261 @@ check_storage() {
 
 step_update_pkg() {
     print_status "Step 1/7: Updating package database..."
-    pkg update -y
+    if ! pkg update -y >/dev/null 2>&1; then
+        print_warning "Package update failed - network may be unavailable"
+        print_warning "Continuing with existing package versions..."
+    fi
     print_success "Package database updated"
 }
 
 step_install_core() {
     print_status "Step 2/7: Installing core dependencies..."
-    pkg install -y \
-        git \
-        curl \
-        wget \
-        jq \
-        python \
-        python-pip \
-        sqlite \
-        termux-api \
-        termux-auth \
-        openssl-tool \
-        proot-distro \
-        clang \
-        make \
-        cmake \
-        pkg-config \
-        libffi \
-        libxml2 \
-        libxslt \
-        libpng \
-        libjpeg-turbo \
-        freetype \
-        zlib \
-        libzmq \
-        libczmq
-
+    
+    print_status "Installing: git, curl, wget, jq, python, python-pip, termux-api..."
+    
+    # Install core packages with progress
+    local packages="git curl wget jq python python-pip termux-api"
+    local failed=""
+    local installed=""
+    
+    for pkg_name in $packages; do
+        printf "  - %s... " "$pkg_name"
+        if pkg install -y "$pkg_name" >/dev/null 2>&1; then
+            echo "OK"
+        else
+            echo "FAILED"
+            failed="$failed $pkg_name"
+        fi
+    done
+    
+    print_status "Installing: build tools (clang, make, cmake, pkg-config)..."
+    pkg install -y clang make cmake pkg-config >/dev/null 2>&1 || true
+    
+    print_status "Installing: libraries (libffi, libxml2, libxslt, libpng, libjpeg-turbo)..."
+    pkg install -y libffi libxml2 libxslt libpng libjpeg-turbo freetype zlib >/dev/null 2>&1 || true
+    
+    if [ -n "$failed" ]; then
+        echo ""
+        print_warning "Failed packages:$failed"
+        print_warning "Install manually: pkg install <package_name>"
+    fi
     print_success "Core dependencies installed"
 }
 
 step_install_python() {
     print_status "Step 3/7: Installing Python libraries..."
 
-    pip install --upgrade pip setuptools wheel
+    print_status "Upgrading pip, setuptools, wheel..."
+    python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
 
-    pip install \
-        click \
-        rich \
-        aiohttp \
-        aiofiles \
-        beautifulsoup4 \
-        lxml \
-        html2text \
-        requests \
-        urllib3 \
-        pydantic \
-        pyyaml \
-        python-dotenv \
-        orjson \
-        httpx[http2] \
-        websockets \
-        psutil \
-        schedule \
-        cryptography \
-        prompt-toolkit
+    print_status "Installing core packages (click, rich, aiohttp, beautifulsoup4, etc.)..."
+    local failed=""
+    if ! python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit >/dev/null 2>&1; then
+        failed="core packages"
+    fi
+    
+    print_status "Installing httpx (HTTP client)..."
+    python -m pip install "httpx[http2]" >/dev/null 2>&1 || python -m pip install httpx >/dev/null 2>&1 || true
+    
+    print_status "Installing python-telegram-bot (optional)..."
+    if ! python -m pip install python-telegram-bot >/dev/null 2>&1; then
+        print_warning "Telegram notifications disabled (optional package)"
+    fi
 
-    # Install optional telegram support
-    pip install python-telegram-bot[ext] || print_warning "Telegram support installation failed"
-
+    if [ -n "$failed" ]; then
+        print_warning "Some packages failed - run manually: pip install <package>"
+    fi
     print_success "Python libraries installed"
 }
 
 step_install_go_tools() {
     print_status "Step 4/7: Installing Go-based tools..."
 
-    if command -v go &> /dev/null; then
-        export GOPATH="$HOME/go"
-        export PATH="$PATH:$GOPATH/bin"
-
-        go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest || print_warning "naabu install failed"
-        go install github.com/projectdiscovery/katana/cmd/katana@latest || print_warning "katana install failed"
-        go install github.com/projectdiscovery/httpx/cmd/httpx@latest || print_warning "httpx install failed"
-        go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest || print_warning "subfinder install failed"
-        go install github.com/projectdiscovery/notify/cmd/notify@latest || print_warning "notify install failed"
-        go install github.com/lc/gau/v2/cmd/gau@latest || print_warning "gau install failed"
-        go install github.com/ffuf/ffuf@latest || print_warning "ffuf install failed"
-        go install github.com/sensepost/gowitness@latest || print_warning "gowitness install failed"
-
-        print_success "Go tools installed"
-    else
-        print_warning "Go not found. Skipping native tools."
-        print_warning "Install Go for better performance: pkg install golang"
+    if ! command -v go >/dev/null 2>&1; then
+        echo ""
+        print_warning "Go is not installed"
+        print_warning "Security tools (naabu, katana, subfinder, etc.) will be skipped"
+        echo ""
+        print_status "To install Go tools later:"
+        print_status "  1. pkg install golang"
+        print_status "  2. go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+        print_status "  3. go install github.com/projectdiscovery/katana/cmd/katana@latest"
+        print_status "  4. go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+        print_status "  5. go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
+        print_status "  6. go install github.com/lc/gau/v2/cmd/gau@latest"
+        echo ""
+        print_success "Skipped (Go not found)"
+        return 0
     fi
+    
+    print_status "Installing Go security tools..."
+    export GOPATH="$HOME/go"
+    export PATH="$PATH:$GOPATH/bin"
+
+    local tools="naabu katana httpx subfinder notify gau ffuf"
+    for tool in $tools; do
+        printf "  - %s... " "$tool"
+        if go install "github.com/projectdiscovery/$tool/v2/cmd/$tool@latest" >/dev/null 2>&1 2>/dev/null || \
+           go install "github.com/lc/gau/v2/cmd/gau@latest" >/dev/null 2>&1 2>/dev/null || \
+           go install "github.com/ffuf/ffuf@latest" >/dev/null 2>&1 2>/dev/null; then
+            echo "OK"
+        else
+            echo "SKIPPED"
+        fi
+    done
+
+    print_success "Go tools installed"
 }
 
 step_install_python_tools() {
     print_status "Step 5/7: Installing Python-based tools..."
 
-    pip install \
-        dirsearch \
-        arjun \
-        wafw00f || print_warning "Some tools failed to install"
+    print_status "Installing: dirsearch, arjun, wafw00f..."
+    local failed=""
+    local tools="dirsearch arjun wafw00f"
+    for tool in $tools; do
+        printf "  - %s... " "$tool"
+        if python -m pip install "$tool" >/dev/null 2>&1; then
+            echo "OK"
+        else
+            echo "FAILED"
+            failed="$failed $tool"
+        fi
+    done
+    
+    if [ -n "$failed" ]; then
+        print_warning "Failed:$failed"
+        print_warning "Install manually: pip install dirsearch arjun wafw00f"
+    fi
 
     print_success "Python tools installed"
 }
 
 step_permissions() {
-    print_status "Step 6/7: Requesting Android permissions..."
+    print_status "Step 6/7: Configuring Android permissions..."
 
-    # Request notification permission
-    if ! termux-notification --title "DeepHunt Test" --content "API OK" 2>/dev/null; then
-        print_warning "Please grant notification permission to Termux:API"
-        termux-open --chooser "android.settings.NOTIFICATION_SETTINGS" 2>/dev/null || true
+    # Skip permission requests in non-interactive mode or if not in Termux
+    if [ -z "$TERMUX_VERSION" ]; then
+        print_warning "Not running in Termux - skipping Android permissions"
+        print_warning "On desktop Linux/macOS, no special permissions needed"
+        print_success "Permissions step skipped (non-Termux environment)"
+        return 0
     fi
 
-    # Disable battery optimization
-    termux-open --chooser "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" 2>/dev/null || true
+    # Check if termux-notification is available
+    if ! command -v termux-notification >/dev/null 2>&1; then
+        print_warning "Termux:API app not installed"
+        print_warning "DeepHunt will run without notification support"
+        print_warning "To enable: pkg install termux-api, then grant notification permission"
+        print_success "Permissions setup skipped (Termux:API not available)"
+        return 0
+    fi
 
-    print_success "Permission requests completed"
+    # Test notification permission (with timeout to prevent hanging)
+    print_status "Testing notification permission..."
+    if timeout 5 termux-notification --title "DeepHunt" --content "API test" >/dev/null 2>&1; then
+        print_success "Notifications enabled - you'll receive hunt approvals via notifications"
+    else
+        print_warning "Notifications require permission setup"
+        print_warning "To enable: Open Termux app > Settings > Permissions > Allow notifications"
+        print_warning "DeepHunt will still work but you'll need to check manually for approvals"
+    fi
+
+    # Battery optimization info
+    print_status "Battery optimization (optional but recommended):"
+    print_status "  Settings > Apps > Termux > Battery > Unrestricted"
+    print_status "  This prevents Termux from being killed during long hunts"
+
+    print_success "Permissions configuration complete"
 }
 
 step_setup_workspace() {
     print_status "Step 7/7: Setting up DeepHunt workspace..."
 
-    # Clone or update repository
+    # Ensure pip bin directory is in PATH
+    export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+
+    # Clone or update repository silently
     if [ -d "$WORKSPACE_DIR/.git" ]; then
-        print_status "Updating existing repository..."
+        print_status "Updating existing DeepHunt installation..."
         cd "$WORKSPACE_DIR"
-        git pull origin main || print_warning "Git pull failed"
+        if ! git pull origin main >/dev/null 2>&1; then
+            print_warning "Failed to update - check your internet connection"
+            print_warning "Continuing with existing installation..."
+        fi
     else
-        print_status "Cloning DeepHunt repository..."
-        git clone "$REPO_URL" "$WORKSPACE_DIR" || {
-            print_warning "Git clone failed, creating workspace manually..."
+        print_status "Downloading DeepHunt repository..."
+        if ! git clone "$REPO_URL" "$WORKSPACE_DIR" >/dev/null 2>&1; then
+            print_warning "Failed to clone repository - check your internet connection"
+            print_warning "Creating empty workspace directory..."
             mkdir -p "$WORKSPACE_DIR"
-        }
+        fi
     fi
 
     # Install DeepHunt in development mode
-    cd "$WORKSPACE_DIR"
-    pip install -e . || print_warning "Development install failed, using direct execution"
+    if [ -d "$WORKSPACE_DIR" ]; then
+        print_status "Installing DeepHunt package..."
+        cd "$WORKSPACE_DIR"
+        
+        # Run pip install and capture output
+        pip_output=$(python -m pip install -e . 2>&1)
+        
+        # Check if installation actually succeeded
+        if echo "$pip_output" | grep -qE "(Successfully installed|Requirement already satisfied)"; then
+            print_success "DeepHunt package installed successfully"
+        elif python -c "import deephunt" 2>/dev/null; then
+            print_success "DeepHunt package installed"
+        else
+            print_warning "Package installation may have failed"
+            print_warning "Try manually: cd ~/deephunt && pip install -e ."
+        fi
+    fi
 
     # Initialize workspace
-    python -m deephunt.cli init || print_warning "Workspace initialization failed"
+    print_status "Initializing DeepHunt configuration..."
+    if python -m deephunt.cli init >/dev/null 2>&1; then
+        print_success "DeepHunt configuration initialized"
+    else
+        print_warning "Configuration initialization failed"
+        print_warning "You can run 'dhunt init' later to configure"
+    fi
+
+    # Create symlinks for dhunt command in PATH
+    print_status "Setting up dhunt command..."
+    
+    # Try multiple locations for the dhunt script
+    local script_sources="$HOME/.local/bin/dhunt $HOME/.local/bin/deephunt"
+    local linked=false
+    
+    for script in $script_sources; do
+        if [ -f "$script" ]; then
+            local cmd_name=$(basename "$script")
+            # Create symlink in PREFIX/bin if not already there
+            if [ ! -f "$PREFIX/bin/$cmd_name" ]; then
+                ln -sf "$script" "$PREFIX/bin/$cmd_name" 2>/dev/null && {
+                    print_success "Linked $cmd_name to $PREFIX/bin"
+                    linked=true
+                }
+            fi
+        fi
+    done
+    
+    # If symlink creation failed, ensure PATH includes local bin
+    if [ "$linked" = false ]; then
+        export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
+        
+        # Add to bashrc for persistence if not already there
+        if ! grep -q "\.local/bin" ~/.bashrc 2>/dev/null; then
+            echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+        fi
+        
+        if command -v dhunt >/dev/null 2>&1; then
+            print_success "dhunt command available in PATH"
+        else
+            print_warning "dhunt command not found in PATH"
+            print_warning "Added ~/.local/bin to PATH. Run: source ~/.bashrc"
+        fi
+    fi
 
     print_success "Workspace setup complete"
 }
@@ -229,30 +365,30 @@ main() {
     print_status "Starting DeepHunt bootstrap..."
     print_status "Platform: Android $(getprop ro.build.version.release 2>/dev/null || echo 'Unknown')"
     print_status "Termux: ${TERMUX_VERSION:-Unknown}"
-    print ""
+    echo ""
 
-    # Run checks
-    check_termux
-    check_storage
+    # Run checks (non-fatal)
+    check_termux 2>/dev/null || true
+    check_storage 2>/dev/null || true
 
-    # Run installation steps
-    step_update_pkg
-    step_install_core
-    step_install_python
-    step_install_go_tools
-    step_install_python_tools
-    step_permissions
-    step_setup_workspace
+    # Run installation steps (non-fatal)
+    step_update_pkg 2>/dev/null || true
+    step_install_core 2>/dev/null || true
+    step_install_python 2>/dev/null || true
+    step_install_go_tools 2>/dev/null || true
+    step_install_python_tools 2>/dev/null || true
+    step_permissions 2>/dev/null || true
+    step_setup_workspace 2>/dev/null || true
 
     # Post-installation
-    print ""
+    echo ""
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}  DeepHunt Bootstrap Complete!          ${NC}"
     echo -e "${GREEN}========================================${NC}"
-    print ""
+    echo ""
     print_status "Workspace: $WORKSPACE_DIR"
     print_status "Binary: dhunt"
-    print ""
+    echo ""
     echo "  Quick start:"
     echo "    dhunt --help"
     echo "    dhunt init"

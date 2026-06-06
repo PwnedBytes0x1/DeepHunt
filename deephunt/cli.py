@@ -5,13 +5,14 @@ Rich colorized interface optimized for Termux and standard terminals.
 """
 
 import asyncio
-import os
 import sys
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import click
 from pathlib import Path
 from typing import Optional
-from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
@@ -22,8 +23,6 @@ from rich import box
 
 from deephunt import (
     __version__,
-    __author__,
-    __description__,
     WORKSPACE_DIR,
     IDENTITY_DIR,
     HUNTS_DIR,
@@ -37,7 +36,7 @@ from deephunt.core.orchestrator import Orchestrator
 from deephunt.core.config import ConfigManager
 from deephunt.skills.loader import SkillLoader
 from deephunt.utils.termux import TermuxUtils
-from deephunt.utils.banner import get_banner, get_small_banner
+from deephunt.utils.banner import get_banner
 from deephunt.utils.logger import setup_logging
 
 # Rich console for beautiful output
@@ -110,6 +109,7 @@ def cli(ctx, workspace, config, verbose, no_color):
     ctx.obj["verbose"] = verbose
     ctx.obj["workspace"] = workspace or str(WORKSPACE_DIR)
     ctx.obj["config"] = config
+    ctx.obj["no_color"] = no_color
 
     if ctx.invoked_subcommand is None:
         # Show banner and help when no command given
@@ -135,9 +135,10 @@ def cli(ctx, workspace, config, verbose, no_color):
 def init(ctx, force, minimal):
     """Initialize DeepHunt workspace and configuration."""
     workspace = Path(ctx.obj["workspace"])
+    no_color = ctx.obj.get("no_color", False)
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     # Check if already initialized
@@ -254,9 +255,10 @@ def init(ctx, force, minimal):
 def hunt(ctx, target, scope, exclude, aggression, budget, dry_run, from_program):
     """Start a new vulnerability hunt against TARGET."""
     workspace = Path(ctx.obj["workspace"])
+    no_color = ctx.obj.get("no_color", False)
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     # Validate workspace is initialized
@@ -354,9 +356,10 @@ def hunt(ctx, target, scope, exclude, aggression, budget, dry_run, from_program)
 def status(ctx, hunt_id):
     """Show status of hunts. If HUNT_ID is provided, show detailed status."""
     workspace = Path(ctx.obj["workspace"])
+    no_color = ctx.obj.get("no_color", False)
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     hunts_dir = workspace / "deephunt_hunts"
@@ -542,7 +545,7 @@ def skills(ctx):
 @click.option(
     "--category",
     "-c",
-    type=click.Choice(["all", "recon", "exploitation", "reporting", "post_exploitation", "network", "payloads"]),
+    type=click.Choice(["all", "recon", "exploitation", "reporting", "post_exploitation", "network", "payloads", "chaining"]),
     default="all",
     help="Filter by category",
 )
@@ -556,6 +559,7 @@ def skills(ctx):
 def skills_list(ctx, category, detail):
     """List all available skills."""
     workspace = Path(ctx.obj["workspace"])
+    no_color = ctx.obj.get("no_color", False)
 
     # Load from workspace skills (user-created)
     ws_skill_loader = SkillLoader(workspace / "skills")
@@ -567,7 +571,7 @@ def skills_list(ctx, category, detail):
     project_skills_dir = Path(__file__).parent.parent / "skills"
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     # Discover all skills from all sources
@@ -715,11 +719,12 @@ def config(ctx):
 def config_show(ctx):
     """Show current configuration."""
     workspace = Path(ctx.obj["workspace"])
+    no_color = ctx.obj.get("no_color", False)
     config_mgr = ConfigManager(workspace)
     config_data = config_mgr.load_config()
 
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     table = Table(
@@ -801,8 +806,10 @@ def config_set_apikey(ctx, provider, api_key):
 @click.pass_context
 def check(ctx):
     """Run system health check."""
+    no_color = ctx.obj.get("no_color", False)
+    
     console.print()
-    console.print(get_small_banner())
+    console.print(get_banner(no_color=no_color))
     console.print()
 
     console.print(f"[bold {COLORS['primary']}]Running health check...[/bold {COLORS['primary']}]")

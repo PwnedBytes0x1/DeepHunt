@@ -41,7 +41,6 @@ a = Analysis(
         'lxml',
         'yaml',
         'cryptography',
-        'psutil',
         'PIL',
         'pkg_resources',
         # Ensure all agents can be imported

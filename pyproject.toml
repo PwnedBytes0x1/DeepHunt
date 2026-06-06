@@ -45,17 +45,16 @@ dependencies = [
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "python-dotenv>=1.0",
-    "orjson>=3.8",
+    "ujson>=5.0",
     "httpx[http2]>=0.25",
     "websockets>=11.0",
-    "psutil>=5.9",
     "schedule>=1.2",
     "cryptography>=41.0",
     "prompt-toolkit>=3.0",
 ]
 
 [project.optional-dependencies]
-telegram = ["python-telegram-bot[ext]>=20.0"]
+telegram = ["python-telegram-bot>=20.0"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",
@@ -68,7 +67,7 @@ dev = [
 
 [project.scripts]
 dhunt = "deephunt.cli:main"
-deeephunt = "deephunt.cli:main"
+deephunt = "deephunt.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/PwnedBytes0x1/deephunt"

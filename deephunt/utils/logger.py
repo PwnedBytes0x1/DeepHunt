@@ -6,7 +6,10 @@ Handles both system logging and hunt-specific immutable logging.
 import logging
 import hashlib
 import hmac
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 import os
 from datetime import datetime
 from pathlib import Path
@@ -92,8 +95,12 @@ class ImmutableLog:
                 if lines:
                     last_entry = json.loads(lines[-1])
                     return last_entry.get("this_hash", "0" * 64)
-        except (json.JSONDecodeError, IOError):
-            pass
+        except json.JSONDecodeError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to parse last log entry: {e}")
+        except IOError as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Failed to read log file: {e}")
 
         return "0" * 64
 
@@ -163,11 +170,12 @@ class ImmutableLog:
                     # Check prev_hash matches
                     if entry.get("prev_hash") != expected_hash:
                         tampered.append(i)
+                        expected_hash = entry.get("this_hash", "0" * 64)
                         continue
 
                     # Verify this_hash
-                    entry_copy = entry.copy()
-                    actual_hash = entry_copy.pop("this_hash")
+                    entry_copy = dict(entry)
+                    actual_hash = entry_copy.pop("this_hash", "")
                     entry_copy.pop("signature", None)
                     expected_this = hashlib.sha256(
                         json.dumps(entry_copy, sort_keys=True).encode()
@@ -175,12 +183,21 @@ class ImmutableLog:
 
                     if actual_hash != expected_this:
                         tampered.append(i)
+                        expected_hash = actual_hash
                         continue
 
-                    # Verify signature
+                    # Verify HMAC signature
+                    entry_str = json.dumps(entry_copy, sort_keys=True)
+                    expected_sig = hmac.new(
+                        self.key, entry_str.encode(), hashlib.sha256
+                    ).hexdigest()
+                    
+                    if entry.get("signature") != expected_sig:
+                        tampered.append(i)
+
                     expected_hash = actual_hash
 
-                except json.JSONDecodeError:
+                except (json.JSONDecodeError, KeyError, TypeError):
                     tampered.append(i)
 
         return tampered

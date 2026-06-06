@@ -3,6 +3,8 @@ Banner generation for DeepHunt CLI
 Rich, colorized banners for Termux and standard terminals.
 """
 
+import os
+
 from rich.text import Text
 from rich.panel import Panel
 from rich import box
@@ -62,7 +64,6 @@ def get_banner(no_color: bool = False) -> Panel:
     banner_text.append(VERSION_TAG, style="bold yellow")
 
     # Add termux indicator if applicable
-    import os
     if "TERMUX_VERSION" in os.environ:
         banner_text.append("  [TERMUX]", style="bold green")
 

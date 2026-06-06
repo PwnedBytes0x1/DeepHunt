@@ -4,12 +4,16 @@ Manages hunt lifecycle, spawns/kills agents, enforces approval gates.
 """
 
 import asyncio
-import json
 import time
-import psutil
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 from datetime import datetime
+
+# Optional imports with graceful fallback
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 from deephunt.core.identity import Identity
 from deephunt.core.scope import ScopeFilter
@@ -251,12 +255,15 @@ class Orchestrator:
         """Monitor memory usage and throttle if needed."""
         while True:
             try:
-                mem = psutil.virtual_memory()
-                if mem.used > self.memory_limit:
+                # Use TermuxUtils for memory monitoring (works on Android and desktop)
+                mem_info = self.termux.get_memory_usage()
+                mem_used = mem_info.get("used", 0)
+
+                if mem_used > self.memory_limit:
                     await self.message_bus.put({
                         "type": "memory_pressure",
                         "action": "serialize",
-                        "used_mb": mem.used / (1024 * 1024),
+                        "used_mb": mem_used / (1024 * 1024) if mem_used > 1024 else mem_used,
                     })
 
                 # Check battery on Termux

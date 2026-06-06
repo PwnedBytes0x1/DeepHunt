@@ -32,12 +32,12 @@ help:
 
 # Install production dependencies
 install:
-	$(PIP) install --upgrade pip setuptools wheel
-	$(PIP) install -r requirements.txt
+	$(PYTHON) -m pip install --upgrade pip setuptools wheel
+	$(PYTHON) -m pip install -r requirements.txt
 
 # Install with dev dependencies
 install-dev: install
-	$(PIP) install -e ".[dev,telegram]"
+	$(PYTHON) -m pip install -e ".[dev]"
 
 # Full setup
 setup: install-dev
@@ -56,7 +56,7 @@ build:
 # Compile standalone binary
 binary:
 	@echo "  \033[1;36mCompiling DeepHunt binary...\033[0m"
-	pyinstaller $(SPEC_FILE) --clean --noconfirm
+	$(PYTHON) -m PyInstaller $(SPEC_FILE) --clean --noconfirm
 	@echo ""
 	@echo "  \033[1;36mBinary compiled!\033[0m Location: \033[1;33mdist/dhunt\033[0m"
 	@echo "  Install globally: \033[1;33msudo cp dist/dhunt /usr/local/bin/\033[0m"
@@ -66,7 +66,7 @@ binary:
 # Compile binary optimized for Termux
 binary-termux:
 	@echo "  \033[1;36mCompiling DeepHunt for Termux...\033[0m"
-	pyinstaller $(SPEC_FILE) --clean --noconfirm \
+	$(PYTHON) -m PyInstaller $(SPEC_FILE) --clean --noconfirm \
 		--distpath $(HOME)/.local/bin \
 		--name dhunt-termux
 	@echo ""
@@ -98,3 +98,18 @@ clean:
 # Development mode
 dev:
 	$(PYTHON) -m deephunt.cli $(ARGS)
+
+# Termux-specific install (for use in Termux environment)
+termux-install:
+	@echo "  \033[1;36mInstalling DeepHunt in Termux...\033[0m"
+	$(PYTHON) -m pip install --upgrade pip
+	$(PYTHON) -m pip install -e .
+	@echo ""
+	@echo "  \033[1;32mDeepHunt installed successfully!\033[0m"
+	@echo "  Run: \033[1;33mdhunt --help\033[0m"
+	@echo ""
+
+# Quick install without optional dependencies
+install-minimal:
+	$(PYTHON) -m pip install --upgrade pip setuptools wheel
+	$(PYTHON) -m pip install click rich aiohttp beautifulsoup4 pyyaml python-dotenv requests

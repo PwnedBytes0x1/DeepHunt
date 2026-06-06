@@ -5,7 +5,10 @@ Handles permissions, notifications, wake locks, and storage.
 
 import os
 import subprocess
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from pathlib import Path
 from typing import Optional, Dict, Any
 
@@ -40,43 +43,53 @@ class TermuxUtils:
             return (-1, "", "Termux:API not available")
 
         try:
+            # Convert all args to strings to avoid type issues
+            cmd_list = [f"termux-{command}"] + [str(arg) for arg in args]
             result = subprocess.run(
-                [f"termux-{command}", *args],
+                cmd_list,
                 capture_output=True,
                 text=True,
                 timeout=30,
             )
             return (result.returncode, result.stdout, result.stderr)
-        except (subprocess.TimeoutExpired, FileNotFoundError):
+        except subprocess.TimeoutExpired:
+            return (-1, "", f"termux-{command} timed out")
+        except FileNotFoundError:
             return (-1, "", f"termux-{command} not found")
+        except Exception as e:
+            return (-1, "", f"termux-{command} error: {e}")
 
     def setup_permissions(self) -> bool:
         """Request necessary Android permissions.
 
         Returns:
-            True if setup was successful
+            True if setup was successful (or skipped gracefully)
         """
         if not self.is_termux:
             return True
 
-        success = True
+        # Battery optimization exemption (non-blocking)
+        try:
+            rc, _, _ = self._run_api("battery-status")
+            if rc != 0:
+                # Try to open settings (non-blocking)
+                self._run_api("open", "--chooser", "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+        except Exception:
+            pass
 
-        # Battery optimization exemption
-        rc, _, _ = self._run_api("battery-status")
-        if rc != 0:
-            # Try to open settings
-            self._run_api("open", "--chooser", "android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS")
+        # Notification permission (Android 14+) - non-blocking
+        try:
+            rc, _, _ = self._run_api(
+                "notification",
+                "--title", "DeepHunt Setup",
+                "--content", "Testing notification permission",
+            )
+            if rc != 0:
+                self._run_api("open", "--chooser", "android.settings.NOTIFICATION_SETTINGS")
+        except Exception:
+            pass
 
-        # Notification permission (Android 14+)
-        rc, _, _ = self._run_api(
-            "notification",
-            "--title", "DeepHunt Setup",
-            "--content", "Testing notification permission",
-        )
-        if rc != 0:
-            self._run_api("open", "--chooser", "android.settings.NOTIFICATION_SETTINGS")
-
-        return success
+        return True  # Always return True, permissions are optional
 
     def send_notification(
         self,
@@ -196,7 +209,9 @@ class TermuxUtils:
             with open("/sys/class/power_supply/battery/status") as f:
                 status = f.read().strip().lower()
             return {"percentage": percentage, "status": status}
-        except (FileNotFoundError, PermissionError):
+        except (FileNotFoundError, PermissionError, ValueError) as e:
+            import logging
+            logging.getLogger(__name__).debug(f"Could not read battery sysfs: {e}")
             return {"status": "unknown", "percentage": 100}
 
     def get_thermal_status(self) -> Dict[str, Any]:
@@ -251,3 +266,30 @@ class TermuxUtils:
             }
         except Exception:
             return {"total": 0, "used": 0, "free": 0, "total_gb": 0, "used_gb": 0, "free_gb": 0}
+
+    def get_memory_usage(self) -> Dict[str, Any]:
+        """Get memory usage (fallback for psutil on Android)."""
+        try:
+            with open("/proc/meminfo", "r") as f:
+                lines = f.readlines()
+
+            mem_info = {}
+            for line in lines:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    name = parts[0].strip()
+                    value = parts[1].strip().split(" ")[0]
+                    mem_info[name] = int(value) * 1024  # Convert KB to bytes
+
+            total = mem_info.get("MemTotal", 0)
+            available = mem_info.get("MemAvailable", mem_info.get("MemFree", 0) + mem_info.get("Cached", 0))
+            used = total - available
+
+            return {
+                "total": total,
+                "available": available,
+                "used": used,
+                "percent": (used / total * 100) if total > 0 else 0
+            }
+        except Exception:
+            return {"total": 0, "available": 0, "used": 0, "percent": 0}

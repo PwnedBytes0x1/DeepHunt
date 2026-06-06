@@ -27,12 +27,12 @@ def get_workspace_dir() -> Path:
         Path to the workspace directory. On Termux, this defaults
         to $HOME/deephunt. On other systems, uses $HOME/.deephunt.
     """
-    default = (
-        "/data/data/com.termux/files/home/deephunt"
-        if is_termux()
-        else str(Path.home() / ".deephunt")
-    )
-    return Path(os.getenv("WORKSPACE_DIR", default))
+    if is_termux():
+        default = Path.home() / "deephunt"
+    else:
+        default = Path.home() / ".deephunt"
+
+    return Path(os.getenv("WORKSPACE_DIR", str(default)))
 
 
 def is_termux() -> bool:

@@ -8,8 +8,10 @@ Skill search paths (in order of priority):
 3. bundled skills (deephunt/skills/)
 """
 
-import json
-import re
+try:
+    import ujson as json
+except ImportError:
+    import json
 import yaml
 from pathlib import Path
 from typing import List, Dict, Any, Optional

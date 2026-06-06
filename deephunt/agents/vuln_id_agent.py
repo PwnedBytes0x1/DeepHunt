@@ -4,7 +4,10 @@ Detects and analyzes potential vulnerabilities from recon data.
 """
 
 import asyncio
-import json
+try:
+    import ujson as json
+except ImportError:
+    import json
 from typing import Dict, Any
 
 
