@@ -1,22 +1,40 @@
 <div align="center">
 
-```
-    DeepHunt v1.0 - Autonomous AI-Driven Cybersecurity Agent
-    =========================================================
-```
+<h1>
+<pre>
+ ██████╗ ███████╗███████╗██████╗ ██╗  ██╗██╗   ██╗███╗   ██╗████████╗
+ ██╔══██╗██╔════╝██╔════╝██╔══██╗██║  ██║██║   ██║████╗  ██║╚══██╔══╝
+ ██║  ██║█████╗  █████╗  ██████╔╝███████║██║   ██║██╔██╗ ██║   ██║
+ ██║  ██║██╔══╝  ██╔══╝  ██╔═══╝ ██╔══██║██║   ██║██║╚██╗██║   ██║
+ ██████╔╝███████╗███████╗██║     ██║  ██║╚██████╔╝██║ ╚████║   ██║
+ ╚═════╝ ╚══════╝╚══════╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝
+</pre>
+</h1>
 
 ### Autonomous AI-Driven Cybersecurity Agent
+
+| Version | Platform | License |
+|---------|----------|---------|
+| v1.0.0 | Termux / Linux | MIT |
+
+**AI-powered bug bounty hunting on Android via Termux with remote control via Telegram.**
+
+| Command | Description |
+|---------|-------------|
+| `dhunt run` | Run in background with Telegram integration |
+| `/hunt target` | Start hunt via Telegram |
+| `/status` | Check hunt status via Telegram |
 
 [![Version](https://img.shields.io/badge/version-1.0.0-cyan?style=flat-square)](https://github.com/PwnedBytes0x1/deephunt)
 [![Python](https://img.shields.io/badge/python-3.8+-blue?style=flat-square&logo=python)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Termux%20%7C%20Linux-green?style=flat-square&logo=android)](https://termux.dev)
 [![License](https://img.shields.io/badge/license-MIT-purple?style=flat-square)](LICENSE)
 
-**Designed for authorized bug bounty hunting and penetration testing on Android via Termux.**
-
 </div>
 
 ---
+
+
 
 ## Features
 
