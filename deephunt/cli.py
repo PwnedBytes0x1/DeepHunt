@@ -893,6 +893,54 @@ def check(ctx):
     console.print()
 
 
+@cli.command("run")
+@click.option(
+    "--telegram-token",
+    "-t",
+    help="Telegram bot token for remote commands",
+)
+@click.pass_context
+def run(ctx, telegram_token):
+    """Run DeepHunt in background mode with Telegram integration.
+    
+    Keeps DeepHunt running persistently and accepts commands via Telegram.
+    
+    \b
+    Examples:
+        dhunt run                    Run in background
+        dhunt run -t YOUR_TOKEN      Run with Telegram bot
+    
+    \b
+    Telegram Commands:
+        /start  - Start the bot
+        /help   - Show help
+        /status - Show hunt status
+        /hunt   - Start a new hunt
+        /stop   - Stop current hunt
+        /logs   - Get recent logs
+        /stats  - Show statistics
+    """
+    from deephunt.utils.runner import run_background
+    
+    workspace = Path(ctx.obj["workspace"])
+    
+    console.print()
+    console.print(get_banner(no_color=ctx.obj.get("no_color", False)))
+    console.print()
+    
+    if telegram_token:
+        console.print(f"[bold {COLORS['success']}]Starting DeepHunt background runner[/bold {COLORS['success']}]")
+        console.print(f"[dim]Telegram token: {telegram_token[:10]}...[/dim]")
+    else:
+        console.print(f"[bold {COLORS['warning']}]Starting DeepHunt background runner (no Telegram)[/bold {COLORS['warning']}]")
+        console.print(f"[dim]Set --telegram-token or TELEGRAM_BOT_TOKEN to enable remote commands[/dim]")
+    
+    console.print()
+    
+    # Run background (this blocks)
+    run_background(workspace, telegram_token)
+
+
 # Entry point
 def main():
     """Main entry point for the CLI."""
