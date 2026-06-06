@@ -15,11 +15,6 @@ try:
 except ImportError:
     import json
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
-
 from deephunt.core.identity import Identity
 from deephunt.core.scope import ScopeFilter
 from deephunt.utils.logger import ImmutableLog
@@ -260,16 +255,15 @@ class Orchestrator:
         """Monitor memory usage and throttle if needed."""
         while True:
             try:
-                if psutil:
-                    mem_used = psutil.virtual_memory().used
-                else:
-                    mem_used = self.termux.get_memory_usage()["used"]
+                # Use TermuxUtils for memory monitoring (works on Android and desktop)
+                mem_info = self.termux.get_memory_usage()
+                mem_used = mem_info.get("used", 0)
 
                 if mem_used > self.memory_limit:
                     await self.message_bus.put({
                         "type": "memory_pressure",
                         "action": "serialize",
-                        "used_mb": mem_used / (1024 * 1024),
+                        "used_mb": mem_used / (1024 * 1024) if mem_used > 1024 else mem_used,
                     })
 
                 # Check battery on Termux
