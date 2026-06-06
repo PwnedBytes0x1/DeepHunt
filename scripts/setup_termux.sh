@@ -106,24 +106,33 @@ step_update_pkg() {
 step_install_core() {
     print_status "Step 2/7: Installing core dependencies..."
     
-    # Install core packages silently, track failures
+    print_status "Installing: git, curl, wget, jq, python, python-pip, termux-api..."
+    
+    # Install core packages with progress
     local packages="git curl wget jq python python-pip termux-api"
     local failed=""
+    local installed=""
     
     for pkg_name in $packages; do
-        if ! pkg install -y "$pkg_name" >/dev/null 2>&1; then
+        printf "  - %s... " "$pkg_name"
+        if pkg install -y "$pkg_name" >/dev/null 2>&1; then
+            echo "OK"
+        else
+            echo "FAILED"
             failed="$failed $pkg_name"
         fi
     done
     
-    # Install additional packages silently
+    print_status "Installing: build tools (clang, make, cmake, pkg-config)..."
     pkg install -y clang make cmake pkg-config >/dev/null 2>&1 || true
-    pkg install -y libffi libxml2 libxslt >/dev/null 2>&1 || true
-    pkg install -y libpng libjpeg-turbo freetype zlib >/dev/null 2>&1 || true
+    
+    print_status "Installing: libraries (libffi, libxml2, libxslt, libpng, libjpeg-turbo)..."
+    pkg install -y libffi libxml2 libxslt libpng libjpeg-turbo freetype zlib >/dev/null 2>&1 || true
     
     if [ -n "$failed" ]; then
-        print_warning "Some packages failed to install:$failed"
-        print_warning "You may need to install them manually: pkg install <package>"
+        echo ""
+        print_warning "Failed packages:$failed"
+        print_warning "Install manually: pkg install <package_name>"
     fi
     print_success "Core dependencies installed"
 }
@@ -131,23 +140,26 @@ step_install_core() {
 step_install_python() {
     print_status "Step 3/7: Installing Python libraries..."
 
-    # Upgrade pip silently
-    if ! python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1; then
-        print_warning "Failed to upgrade pip - may affect some installations"
-    fi
+    print_status "Upgrading pip, setuptools, wheel..."
+    python -m pip install --upgrade pip setuptools wheel >/dev/null 2>&1 || true
 
-    # Install core dependencies silently
+    print_status "Installing core packages (click, rich, aiohttp, beautifulsoup4, etc.)..."
+    local failed=""
     if ! python -m pip install click rich aiohttp aiofiles beautifulsoup4 lxml html2text requests urllib3 pydantic pyyaml python-dotenv ujson schedule cryptography prompt-toolkit >/dev/null 2>&1; then
-        print_warning "Some core Python packages failed to install"
-        print_warning "Core functionality may be limited - run: pip install <package>"
+        failed="core packages"
     fi
     
-    # Install httpx silently
+    print_status "Installing httpx (HTTP client)..."
     python -m pip install "httpx[http2]" >/dev/null 2>&1 || python -m pip install httpx >/dev/null 2>&1 || true
     
-    # Install optional packages silently
-    python -m pip install python-telegram-bot >/dev/null 2>&1 || print_warning "Telegram notifications disabled (python-telegram-bot failed)"
+    print_status "Installing python-telegram-bot (optional)..."
+    if ! python -m pip install python-telegram-bot >/dev/null 2>&1; then
+        print_warning "Telegram notifications disabled (optional package)"
+    fi
 
+    if [ -n "$failed" ]; then
+        print_warning "Some packages failed - run manually: pip install <package>"
+    fi
     print_success "Python libraries installed"
 }
 
@@ -155,24 +167,37 @@ step_install_go_tools() {
     print_status "Step 4/7: Installing Go-based tools..."
 
     if ! command -v go >/dev/null 2>&1; then
-        print_warning "Go not installed - native security tools will be skipped"
-        print_warning "For full functionality: pkg install golang"
-        print_warning "Then re-run this script to install: go install ..."
+        echo ""
+        print_warning "Go is not installed"
+        print_warning "Security tools (naabu, katana, subfinder, etc.) will be skipped"
+        echo ""
+        print_status "To install Go tools later:"
+        print_status "  1. pkg install golang"
+        print_status "  2. go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest"
+        print_status "  3. go install github.com/projectdiscovery/katana/cmd/katana@latest"
+        print_status "  4. go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest"
+        print_status "  5. go install github.com/projectdiscovery/httpx/cmd/httpx@latest"
+        print_status "  6. go install github.com/lc/gau/v2/cmd/gau@latest"
+        echo ""
+        print_success "Skipped (Go not found)"
         return 0
     fi
     
-    print_status "Go detected, installing security tools..."
+    print_status "Installing Go security tools..."
     export GOPATH="$HOME/go"
     export PATH="$PATH:$GOPATH/bin"
 
-    # Install Go tools silently
-    go install github.com/projectdiscovery/naabu/v2/cmd/naabu@latest >/dev/null 2>&1 || true
-    go install github.com/projectdiscovery/katana/cmd/katana@latest >/dev/null 2>&1 || true
-    go install github.com/projectdiscovery/httpx/cmd/httpx@latest >/dev/null 2>&1 || true
-    go install github.com/projectdiscovery/subfinder/v2/cmd/subfinder@latest >/dev/null 2>&1 || true
-    go install github.com/projectdiscovery/notify/cmd/notify@latest >/dev/null 2>&1 || true
-    go install github.com/lc/gau/v2/cmd/gau@latest >/dev/null 2>&1 || true
-    go install github.com/ffuf/ffuf@latest >/dev/null 2>&1 || true
+    local tools="naabu katana httpx subfinder notify gau ffuf"
+    for tool in $tools; do
+        printf "  - %s... " "$tool"
+        if go install "github.com/projectdiscovery/$tool/v2/cmd/$tool@latest" >/dev/null 2>&1 2>/dev/null || \
+           go install "github.com/lc/gau/v2/cmd/gau@latest" >/dev/null 2>&1 2>/dev/null || \
+           go install "github.com/ffuf/ffuf@latest" >/dev/null 2>&1 2>/dev/null; then
+            echo "OK"
+        else
+            echo "SKIPPED"
+        fi
+    done
 
     print_success "Go tools installed"
 }
@@ -180,10 +205,22 @@ step_install_go_tools() {
 step_install_python_tools() {
     print_status "Step 5/7: Installing Python-based tools..."
 
-    # Install Python-based tools silently
-    if ! python -m pip install dirsearch arjun wafw00f >/dev/null 2>&1; then
-        print_warning "Some Python security tools failed to install"
-        print_warning "You can install manually: pip install dirsearch arjun wafw00f"
+    print_status "Installing: dirsearch, arjun, wafw00f..."
+    local failed=""
+    local tools="dirsearch arjun wafw00f"
+    for tool in $tools; do
+        printf "  - %s... " "$tool"
+        if python -m pip install "$tool" >/dev/null 2>&1; then
+            echo "OK"
+        else
+            echo "FAILED"
+            failed="$failed $tool"
+        fi
+    done
+    
+    if [ -n "$failed" ]; then
+        print_warning "Failed:$failed"
+        print_warning "Install manually: pip install dirsearch arjun wafw00f"
     fi
 
     print_success "Python tools installed"
