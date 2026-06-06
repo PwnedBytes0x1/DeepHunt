@@ -232,19 +232,37 @@ class TelegramRunner:
             f"API Calls: {stats.get('total_api_calls', 0)}\n"
             f"Budget Used: ${stats.get('budget_used', 0):.4f}")
     
+    async def get_me(self) -> Dict[str, Any]:
+        """Get bot info from Telegram."""
+        import httpx
+        url = f"https://api.telegram.org/bot{self.bot_token}/getMe"
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(url, timeout=10)
+                data = response.json()
+                if data.get("ok"):
+                    return data.get("result", {})
+        except Exception as e:
+            print(f"[DeepHunt] Failed to get bot info: {e}")
+        return {}
+    
     async def run(self):
         """Main polling loop."""
         print("[DeepHunt] Telegram bot started. Waiting for commands...")
-        await self.send_message(
-            (await self.get_me())["id"] if hasattr(self, 'get_me') else 0,
-            "🛡️ DeepHunt is now running!"
-        )
+        
+        # Get bot info and send startup message
+        me = await self.get_me()
+        bot_id = me.get("id", 0)
+        if bot_id:
+            await self.send_message(bot_id, "🛡️ DeepHunt is now running!")
         
         while is_running:
             try:
                 updates = await self.get_updates()
                 for update in updates:
                     await self.process_update(update)
+                # Small delay to prevent tight loop
+                await asyncio.sleep(1)
             except Exception as e:
                 print(f"[DeepHunt] Error in Telegram loop: {e}")
                 await asyncio.sleep(5)
