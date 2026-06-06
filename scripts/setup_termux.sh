@@ -147,7 +147,17 @@ step_install_python() {
     
     # Install optional packages silently
     python -m pip install python-telegram-bot >/dev/null 2>&1 || print_warning "Telegram notifications disabled (python-telegram-bot failed)"
-    python -m pip install psutil >/dev/null 2>&1 || print_warning "System monitoring limited (psutil failed)"
+    
+    # psutil requires special handling on Termux - use pre-compiled wheel if available
+    if [ -n "$TERMUX_VERSION" ]; then
+        # On Termux, try pre-compiled wheel first, then skip if not available
+        python -m pip install psutil --prefer-binary >/dev/null 2>&1 || {
+            print_warning "psutil not available for this Android version"
+            print_warning "System monitoring will use fallback methods"
+        }
+    else
+        python -m pip install psutil >/dev/null 2>&1 || print_warning "System monitoring limited (psutil failed)"
+    fi
 
     print_success "Python libraries installed"
 }
